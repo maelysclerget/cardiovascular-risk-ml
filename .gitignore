@@ -6,3 +6,6 @@ __pycache__/
 # Mac specific
 .DS_Store
 *.DS_Store
+
+#Dataset
+dataset/
