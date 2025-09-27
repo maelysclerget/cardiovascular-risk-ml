@@ -7,8 +7,8 @@ __pycache__/
 .DS_Store
 *.DS_Store
 
-#Dataset
+# Dataset
 dataset/
 
-#UV Environment 
+# UV Environment 
 .venv/
