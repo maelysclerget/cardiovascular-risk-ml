@@ -89,7 +89,6 @@ def mean_squared_error_sgd(y, tx, initial_w, max_iters, gamma):
 
     return w, loss
 
-
 def least_squares(y, tx):
     """
     Least squares regression using normal equations.
@@ -132,3 +131,60 @@ def ridge_regression(y, tx, lambda_):
     w = np.linalg.solve(tx.T @ tx + lambda_ * identity, tx.T @ y)
 
     return w, mean_squared_error_loss(y, tx, w)
+
+def logistic(eta):
+    return np.exp(eta)/(1+np.exp(eta))
+
+def logistic_loss_function(y, tx, w):
+    N = tx.shape[0]
+    return ((-y.T @ (tx @ w)) + np.sum(np.log(1+np.exp(tx @ w)))) / N
+
+def compute_gradient_LR(y, tx, w):
+    N = tx.shape[0]
+    return (tx.T @ (logistic(tx @ w)- y)) / N
+
+def logistic_regression(y, tx, initial_w, max_iters, gamma):
+    """
+    Logistic regression using Gradient Descent (GD).
+
+    Parameters
+    ----------
+    y : (np.array) Output data points (0 or 1)
+    tx : (np.array) Input data points
+    initial_w : (np.array) Initial weights
+    max_iters : (int) Maximal number of iterations
+    gamma : (float) Learning rate
+
+    Returns
+    -------
+    (np.array, float) Final weights and their corresponding loss
+    """
+           
+    loss = np.inf
+    w = initial_w
+
+    for _ in range(max_iters):
+        gradient, loss = compute_gradient_LR(y, tx, w), logistic_loss_function(y, tx, w)
+        w = w - gamma*gradient
+
+    return w, loss
+
+def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
+    """
+    Regularized logistic regression using Gradient Descent (GD) with L2 regularization.
+
+    Parameters
+    ----------
+    y : (np.array) Output data points (0 or 1)
+    tx : (np.array) Input data points
+    lambda_ : (float) Regularization parameter
+    initial_w : (np.array) Initial weights
+    max_iters : (int) Maximal number of iterations
+    gamma : (float) Learning rate
+
+    Returns
+    -------
+    (np.array, float) Final weights and their corresponding loss
+    """
+    
+    
