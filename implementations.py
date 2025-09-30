@@ -132,16 +132,56 @@ def ridge_regression(y, tx, lambda_):
 
     return w, mean_squared_error_loss(y, tx, w)
 
-def logistic(eta):
+def sigmoid(eta):
+    """
+    Sigmoid function.
+
+    Parameters
+    ----------
+    eta : (np.array or float)
+        Linear predictor values (can be scalar, vector, or matrix).
+
+    Returns
+    -------
+    (np.array or float) The logistic sigmoid applied elementwise to `eta`.
+    """
     return np.exp(eta)/(1+np.exp(eta))
 
 def logistic_loss_function(y, tx, w, lambda_ = 0):
-    N = tx.shape[0]
-    return ((-y.T @ (tx @ w)) + np.sum(np.log(1+np.exp(tx @ w)))) / N + (lambda_/2) * np.linalg.norm(w)**2
+    """
+    Logistic regression loss function with optional L2 regularization.
+
+    Parameters
+    ----------
+    y : (np.array) Output data points
+    tx : (np.array) Input data points
+    w : (np.array) Weights
+    lambda_ : (float) Regularization parameter
+
+    Returns
+    -------
+    (float) Logistic regression loss with optional L2 penalty:
+    """
+    n = tx.shape[0] # Number of samples
+    return ((-y.T @ (tx @ w)) + np.sum(np.log(1+np.exp(tx @ w)))) / n + (lambda_/2) * np.linalg.norm(w)**2
 
 def compute_gradient_LR(y, tx, w, lambda_ = 0):
-    N = tx.shape[0]
-    return (tx.T @ (logistic(tx @ w)- y)) / N + lambda_*w
+    """
+    Gradient of the logistic regression loss with optional L2 regularization.
+
+    Parameters
+    ----------
+    y : (np.array) Output data points
+    tx : (np.array) Input data points
+    w : (np.array) Weights
+    lambda_ : (float) Regularization parameter
+    
+    Returns
+    -------
+    (np.array) Gradient vector of shape (d, 1), given by:
+    """
+    n = tx.shape[0] # Number of samples
+    return (tx.T @ (sigmoid(tx @ w)- y)) / n + lambda_*w
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma):
     """
@@ -158,8 +198,7 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma):
     Returns
     -------
     (np.array, float) Final weights and their corresponding loss
-    """
-           
+    """   
     loss = np.inf
     w = initial_w
 
@@ -186,12 +225,11 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     -------
     (np.array, float) Final weights and their corresponding loss
     """
-    
     loss = np.inf
     w = initial_w
 
     for _ in range(max_iters):
-        gradient, loss = compute_gradient_LR(y, tx, w, lambda_), logistic_loss_function(y, tx, w, lambda_)
+        gradient, loss = compute_gradient_LR(y, tx, w, lambda_), logistic_loss_function(y, tx, w)
         w = w - gamma*gradient
 
     return w, loss
