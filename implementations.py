@@ -135,13 +135,13 @@ def ridge_regression(y, tx, lambda_):
 def logistic(eta):
     return np.exp(eta)/(1+np.exp(eta))
 
-def logistic_loss_function(y, tx, w):
+def logistic_loss_function(y, tx, w, lambda_ = 0):
     N = tx.shape[0]
-    return ((-y.T @ (tx @ w)) + np.sum(np.log(1+np.exp(tx @ w)))) / N
+    return ((-y.T @ (tx @ w)) + np.sum(np.log(1+np.exp(tx @ w)))) / N + (lambda_/2) * np.linalg.norm(w)**2
 
-def compute_gradient_LR(y, tx, w):
+def compute_gradient_LR(y, tx, w, lambda_ = 0):
     N = tx.shape[0]
-    return (tx.T @ (logistic(tx @ w)- y)) / N
+    return (tx.T @ (logistic(tx @ w)- y)) / N + lambda_*w
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma):
     """
@@ -167,8 +167,8 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma):
         gradient, loss = compute_gradient_LR(y, tx, w), logistic_loss_function(y, tx, w)
         w = w - gamma*gradient
 
-    return w, loss
-
+    return w, loss    
+    
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     """
     Regularized logistic regression using Gradient Descent (GD) with L2 regularization.
@@ -187,4 +187,11 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     (np.array, float) Final weights and their corresponding loss
     """
     
-    
+    loss = np.inf
+    w = initial_w
+
+    for _ in range(max_iters):
+        gradient, loss = compute_gradient_LR(y, tx, w, lambda_), logistic_loss_function(y, tx, w, lambda_)
+        w = w - gamma*gradient
+
+    return w, loss
