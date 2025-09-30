@@ -88,3 +88,47 @@ def mean_squared_error_sgd(y, tx, initial_w, max_iters, gamma):
         w = w - gamma*gradient
 
     return w, loss
+
+
+def least_squares(y, tx):
+    """
+    Least squares regression using normal equations.
+
+    Parameters
+    ----------
+    y : (np.array) Output data points
+    tx : (np.array) Input data points
+
+    Returns
+    -------
+    (np.array, float) Optimal weights and their corresponding MSE loss
+    """
+    # w = (X^T X)^(-1) X^T y
+    w = np.linalg.solve(tx.T @ tx, tx.T @ y)
+    
+    # Compute the MSE loss for the optimal weights
+    loss = mean_squared_error_loss(y, tx, w)
+    
+    return w, loss
+
+
+def ridge_regression(y, tx, lambda_):
+    """
+    Ridge regression using normal equations with L2 regularization.
+
+    Parameters
+    ----------
+    y : (np.array) Output data points
+    tx : (np.array) Input data points
+    lambda_ : (float) Regularization parameter
+
+    Returns
+    -------
+    (np.array, float) Optimal weights and their corresponding MSE loss
+    """
+    # w = (X^T X + λI)^(-1) X^T y
+    d = tx.shape[1]  # Number of features
+    identity = np.identity(d)
+    w = np.linalg.solve(tx.T @ tx + lambda_ * identity, tx.T @ y)
+
+    return w, mean_squared_error_loss(y, tx, w)
