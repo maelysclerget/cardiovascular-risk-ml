@@ -110,7 +110,6 @@ def least_squares(y, tx):
     
     return w, loss
 
-
 def ridge_regression(y, tx, lambda_):
     """
     Ridge regression using normal equations with L2 regularization.
