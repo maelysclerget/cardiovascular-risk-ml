@@ -127,8 +127,9 @@ def ridge_regression(y, tx, lambda_):
     """
     # w = (X^T X + λI)^(-1) X^T y
     d = tx.shape[1]  # Number of features
+    n = tx.shape[0]  # Number of samples 
     identity = np.identity(d)
-    w = np.linalg.solve(tx.T @ tx + lambda_ * identity, tx.T @ y)
+    w = np.linalg.solve(tx.T @ tx + 2*n*lambda_ * identity, tx.T @ y)
 
     return w, mean_squared_error_loss(y, tx, w)
 
