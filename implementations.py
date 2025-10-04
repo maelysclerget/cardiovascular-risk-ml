@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def mean_squared_error_loss(y, tx, w):
     """
     Compute the loss by Mean Squared Error (MSE).
@@ -14,9 +15,10 @@ def mean_squared_error_loss(y, tx, w):
     -------
     (float) MSE loss
     """
-    n = tx.shape[0] # Number of samples
-    e = y - tx@w
-    return (e.T @ e)/(2*n)
+    n = tx.shape[0]  # Number of samples
+    e = y - tx @ w
+    return (e.T @ e) / (2 * n)
+
 
 def compute_gradient_MSE(y, tx, w):
     """
@@ -32,9 +34,10 @@ def compute_gradient_MSE(y, tx, w):
     -------
     (np.array) Gradient of MSE loss
     """
-    n = tx.shape[0] # Number of samples
-    e = y - tx@w
-    return -(tx.T @ e)/n 
+    n = tx.shape[0]  # Number of samples
+    e = y - tx @ w
+    return -(tx.T @ e) / n
+
 
 def mean_squared_error_gd(y, tx, initial_w, max_iters, gamma):
     """
@@ -56,10 +59,13 @@ def mean_squared_error_gd(y, tx, initial_w, max_iters, gamma):
     w = initial_w
 
     for _ in range(max_iters):
-        gradient, loss = compute_gradient_MSE(y, tx, w), mean_squared_error_loss(y, tx, w)
-        w = w - gamma*gradient
+        gradient, loss = compute_gradient_MSE(y, tx, w), mean_squared_error_loss(
+            y, tx, w
+        )
+        w = w - gamma * gradient
 
     return w, loss
+
 
 def mean_squared_error_sgd(y, tx, initial_w, max_iters, gamma):
     """
@@ -79,15 +85,20 @@ def mean_squared_error_sgd(y, tx, initial_w, max_iters, gamma):
     """
     loss = np.inf
     w = initial_w
-    n = tx.shape[0] # Number of samples
+    n = tx.shape[0]  # Number of samples
 
     for _ in range(max_iters):
-        ind = np.random.randint(low = 0, high = n) # Randomly selected index/data point for gradient and loss computation
-        gradient = compute_gradient_MSE(y[ind, np.newaxis, :], tx[ind, np.newaxis, :], w)
+        ind = np.random.randint(
+            low=0, high=n
+        )  # Randomly selected index/data point for gradient and loss computation
+        gradient = compute_gradient_MSE(
+            y[ind, np.newaxis, :], tx[ind, np.newaxis, :], w
+        )
         loss = mean_squared_error_loss(y[ind, np.newaxis, :], tx[ind, np.newaxis, :], w)
-        w = w - gamma*gradient
+        w = w - gamma * gradient
 
     return w, loss
+
 
 def least_squares(y, tx):
     """
@@ -104,11 +115,12 @@ def least_squares(y, tx):
     """
     # w = (X^T X)^(-1) X^T y
     w = np.linalg.solve(tx.T @ tx, tx.T @ y)
-    
+
     # Compute the MSE loss for the optimal weights
     loss = mean_squared_error_loss(y, tx, w)
-    
+
     return w, loss
+
 
 def ridge_regression(y, tx, lambda_):
     """
@@ -126,11 +138,12 @@ def ridge_regression(y, tx, lambda_):
     """
     # w = (X^T X + λI)^(-1) X^T y
     d = tx.shape[1]  # Number of features
-    n = tx.shape[0]  # Number of samples 
+    n = tx.shape[0]  # Number of samples
     identity = np.identity(d)
-    w = np.linalg.solve(tx.T @ tx + 2*n*lambda_ * identity, tx.T @ y)
+    w = np.linalg.solve(tx.T @ tx + 2 * n * lambda_ * identity, tx.T @ y)
 
     return w, mean_squared_error_loss(y, tx, w)
+
 
 def sigmoid(eta):
     """
@@ -145,9 +158,10 @@ def sigmoid(eta):
     -------
     (np.array or float) The logistic sigmoid applied elementwise to `eta`.
     """
-    return np.exp(eta)/(1+np.exp(eta))
+    return np.exp(eta) / (1 + np.exp(eta))
 
-def logistic_loss_function(y, tx, w, lambda_ = 0):
+
+def logistic_loss_function(y, tx, w, lambda_=0):
     """
     Logistic regression loss function with optional L2 regularization.
 
@@ -162,10 +176,13 @@ def logistic_loss_function(y, tx, w, lambda_ = 0):
     -------
     (float) Logistic regression loss with optional L2 penalty:
     """
-    n = tx.shape[0] # Number of samples
-    return ((-y.T @ (tx @ w)) + np.sum(np.log(1+np.exp(tx @ w)))) / n + (lambda_/2) * np.linalg.norm(w)**2
+    n = tx.shape[0]  # Number of samples
+    return ((-y.T @ (tx @ w)) + np.sum(np.log(1 + np.exp(tx @ w)))) / n + (
+        lambda_ / 2
+    ) * np.linalg.norm(w) ** 2
 
-def compute_gradient_LR(y, tx, w, lambda_ = 0):
+
+def compute_gradient_LR(y, tx, w, lambda_=0):
     """
     Gradient of the logistic regression loss with optional L2 regularization.
 
@@ -175,13 +192,14 @@ def compute_gradient_LR(y, tx, w, lambda_ = 0):
     tx : (np.array) Input data points
     w : (np.array) Weights
     lambda_ : (float) Regularization parameter
-    
+
     Returns
     -------
     (np.array) Gradient vector of shape (d, 1), given by:
     """
-    n = tx.shape[0] # Number of samples
-    return (tx.T @ (sigmoid(tx @ w)- y)) / n + lambda_*w
+    n = tx.shape[0]  # Number of samples
+    return (tx.T @ (sigmoid(tx @ w) - y)) / n + lambda_ * w
+
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma):
     """
@@ -198,16 +216,17 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma):
     Returns
     -------
     (np.array, float) Final weights and their corresponding loss
-    """   
+    """
     loss = np.inf
     w = initial_w
 
     for _ in range(max_iters):
         gradient, loss = compute_gradient_LR(y, tx, w), logistic_loss_function(y, tx, w)
-        w = w - gamma*gradient
+        w = w - gamma * gradient
 
-    return w, loss    
-    
+    return w, loss
+
+
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     """
     Regularized logistic regression using Gradient Descent (GD) with L2 regularization.
@@ -229,7 +248,9 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     w = initial_w
 
     for _ in range(max_iters):
-        gradient, loss = compute_gradient_LR(y, tx, w, lambda_), logistic_loss_function(y, tx, w)
-        w = w - gamma*gradient
+        gradient, loss = compute_gradient_LR(y, tx, w, lambda_), logistic_loss_function(
+            y, tx, w
+        )
+        w = w - gamma * gradient
 
     return w, loss
