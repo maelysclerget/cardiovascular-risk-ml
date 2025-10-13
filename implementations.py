@@ -60,7 +60,7 @@ def mean_squared_error_gd(y, tx, initial_w, max_iters, gamma):
     for _ in range(max_iters):
         gradient = compute_gradient_MSE(y, tx, w)
         w = w - gamma * gradient
-    
+
     loss = mean_squared_error_loss(y, tx, w)
 
     return w, loss
@@ -89,12 +89,10 @@ def mean_squared_error_sgd(y, tx, initial_w, max_iters, gamma):
         ind = np.random.randint(
             low=0, high=n
         )  # Randomly selected index/data point for gradient and loss computation
-        gradient = compute_gradient_MSE(
-            y[ind:ind+1], tx[ind:ind+1], w
-        )
+        gradient = compute_gradient_MSE(y[ind : ind + 1], tx[ind : ind + 1], w)
         w = w - gamma * gradient
-            
-    loss = mean_squared_error_loss(y[ind:ind+1], tx[ind:ind+1], w)
+
+    loss = mean_squared_error_loss(y[ind : ind + 1], tx[ind : ind + 1], w)
 
     return w, loss
 
@@ -176,11 +174,13 @@ def logistic_loss_function(y, tx, w, lambda_=0):
     (float) Logistic regression loss with optional L2 penalty:
     """
     n = tx.shape[0]  # Number of samples
-    loss = ((-y.T @ (tx @ w)) + np.sum(np.log(1 + np.exp(tx @ w)))) / n + 2* lambda_ * np.sum(w*w)
-    return loss 
+    z = tx @ w
+    # loss = np.sum(y * np.log(sigmoid(tx @ w)) + (1 - y) * np.log(1 - sigmoid(tx @ w))) / -n + lambda_ * np.sum(w*w)
+    loss = ((-y.T @ z) + np.sum(np.log(1 + np.exp(z)))) / n + lambda_ * np.sum(w * w)
+    return loss
 
 
-def compute_gradient_LR(y, tx, w, lambda_= 0):
+def compute_gradient_LR(y, tx, w, lambda_=0):
     """
     Gradient of the logistic regression loss with optional L2 regularization.
 
@@ -196,7 +196,7 @@ def compute_gradient_LR(y, tx, w, lambda_= 0):
     (np.array) Gradient vector of shape (d, 1), given by:
     """
     n = tx.shape[0]  # Number of samples
-    return (tx.T @ (sigmoid(tx @ w) - y)) / n + lambda_ * w
+    return (tx.T @ (sigmoid(tx @ w) - y)) / n + 2 * lambda_ * w
 
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma):
@@ -220,8 +220,8 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma):
     for _ in range(max_iters):
         gradient = compute_gradient_LR(y, tx, w)
         w = w - gamma * gradient
-    
-    loss = logistic_loss_function(y,tx,w)
+
+    loss = logistic_loss_function(y, tx, w)
 
     return w, loss
 
@@ -249,6 +249,6 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
         gradient = compute_gradient_LR(y, tx, w, lambda_)
         w = w - gamma * gradient
 
-    loss = logistic_loss_function(y,tx,w,lambda_)
+    loss = logistic_loss_function(y, tx, w)
 
     return w, loss
