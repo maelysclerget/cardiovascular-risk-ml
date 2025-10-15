@@ -144,7 +144,7 @@ def ridge_regression(y, tx, lambda_):
 
 def sigmoid(eta):
     """
-    Sigmoid function.
+    Numerically stable sigmoid function.
 
     Parameters
     ----------
@@ -155,7 +155,23 @@ def sigmoid(eta):
     -------
     (np.array or float) The logistic sigmoid applied elementwise to `eta`.
     """
-    return 1 / (1 + np.exp(-eta))
+    # Clip eta to prevent overflow
+    eta = np.clip(eta, -500, 500)
+    
+    # Use numerically stable computation
+    # For eta > 0: sigmoid(eta) = 1 / (1 + exp(-eta))
+    # For eta <= 0: sigmoid(eta) = exp(eta) / (1 + exp(eta))
+    pos_mask = eta > 0
+    result = np.zeros_like(eta)
+    
+    # Positive values
+    result[pos_mask] = 1 / (1 + np.exp(-eta[pos_mask]))
+    
+    # Negative values  
+    exp_eta = np.exp(eta[~pos_mask])
+    result[~pos_mask] = exp_eta / (1 + exp_eta)
+    
+    return result
 
 
 def logistic_loss_function(y, tx, w, lambda_=0):
