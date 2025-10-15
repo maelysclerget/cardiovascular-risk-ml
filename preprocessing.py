@@ -5,9 +5,9 @@ import seaborn as sns
 
 x_train_og, x_test_og, y_train_og, train_ids_og, test_ids_og = load_csv_data("dataset/")
 
-def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', apply_correlation=True):
+def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True):
     """
-    Preprocess the data by filling NaN values.
+    Preprocess the data by filling NaN values, removing correlated features, and normalizing.
 
     Parameters
     ----------
@@ -15,12 +15,18 @@ def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', appl
         Training features
     x_test : np.array
         Test features
+    fill_nan_values : bool
+        Whether to fill NaN values
     strategy : str
         Strategy to fill NaN values: 'mean', 'median', 'zero', 'drop'
+    apply_correlation : bool
+        Whether to remove highly correlated features
+    normalize : bool
+        Whether to normalize features (z-score normalization)
 
     Returns
     -------
-    x_train_processed, x_test_processed : Arrays with NaN values filled
+    x_train_processed, x_test_processed : Arrays with processed features
     """
     x_train_processed = x_train.copy()
     x_test_processed = x_test.copy()
@@ -95,9 +101,23 @@ def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', appl
         for i, j in high_corr_pairs:
             print(f"Feature {i} and Feature {j}: {correlation_matrix[i, j]}")
         plt.show()
+    
+    # Normalize features (z-score normalization) to prevent numerical instability
+    if normalize:
+        # Use training data statistics to normalize both train and test
+        feature_means = np.mean(x_train_processed, axis=0)
+        feature_stds = np.std(x_train_processed, axis=0)
+        
+        # Avoid division by zero for constant features
+        feature_stds = np.where(feature_stds == 0, 1, feature_stds)
+        
+        x_train_processed = (x_train_processed - feature_means) / feature_stds
+        x_test_processed = (x_test_processed - feature_means) / feature_stds
+        
+        print(f"Features normalized. Train mean: {np.mean(x_train_processed):.6f}, Train std: {np.std(x_train_processed):.6f}")
         
     return x_train_processed, x_test_processed
 
 
 if __name__ == "__main__":
-    x_train, x_test = preprocess_data(x_train_og, x_test_og, fill_nan_values=True, strategy='mean', apply_correlation=True)
+    x_train, x_test = preprocess_data(x_train_og, x_test_og, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True)

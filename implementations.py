@@ -215,9 +215,10 @@ def compute_gradient_LR(y, tx, w, lambda_=0):
     return (tx.T @ (sigmoid(tx @ w) - y)) / n + 2 * lambda_ * w
 
 
-def logistic_regression(y, tx, initial_w, max_iters, gamma):
+def logistic_regression(y, tx, initial_w, max_iters, gamma, threshold=1e-8):
     """
     Logistic regression using Gradient Descent (GD).
+    Includes early stopping based on convergence criteria.
 
     Parameters
     ----------
@@ -226,25 +227,47 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma):
     initial_w : (np.array) Initial weights
     max_iters : (int) Maximal number of iterations
     gamma : (float) Learning rate
+    threshold : (float) Convergence threshold for early stopping
 
     Returns
     -------
     (np.array, float) Final weights and their corresponding loss
     """
-    w = initial_w
-
-    for _ in range(max_iters):
+    w = initial_w.copy()
+    losses = []
+    
+    for i in range(max_iters):
+        # Compute current loss
+        current_loss = logistic_loss_function(y, tx, w)
+        losses.append(current_loss)
+        
+        # Compute gradient and update weights
         gradient = compute_gradient_LR(y, tx, w)
         w = w - gamma * gradient
+        
+        # Check for convergence based on loss change (if we have previous loss)
+        if i > 0:
+            loss_change = abs(losses[-1] - losses[-2])
+            # Stop if loss change is below threshold
+            if loss_change < threshold:
+                print(f"Converged at iteration {i+1}/{max_iters}")
+                print(f"Loss change: {loss_change:.2e}")
+                break
+        
+        # Optional: Print progress every 100 iterations
+        if (i + 1) % 100 == 0:
+            print(f"Iteration {i+1}/{max_iters}, Loss: {current_loss:.6f}")
+    
+    # Final loss computation
+    final_loss = logistic_loss_function(y, tx, w)
+    
+    return w, final_loss
 
-    loss = logistic_loss_function(y, tx, w)
 
-    return w, loss
-
-
-def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
+def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, threshold=1e-8):
     """
     Regularized logistic regression using Gradient Descent (GD) with L2 regularization.
+    Includes early stopping based on convergence criteria.
 
     Parameters
     ----------
@@ -254,17 +277,180 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     initial_w : (np.array) Initial weights
     max_iters : (int) Maximal number of iterations
     gamma : (float) Learning rate
+    threshold : (float) Convergence threshold for early stopping
 
     Returns
     -------
     (np.array, float) Final weights and their corresponding loss
     """
-    w = initial_w
-
-    for _ in range(max_iters):
+    w = initial_w.copy()
+    losses = []
+    
+    for i in range(max_iters):
+        # Compute current loss
+        current_loss = logistic_loss_function(y, tx, w, lambda_)
+        losses.append(current_loss)
+        
+        # Compute gradient and update weights
         gradient = compute_gradient_LR(y, tx, w, lambda_)
         w = w - gamma * gradient
+        
+        # Check for convergence based on loss change (if we have previous loss)
+        if i > 0:
+            loss_change = abs(losses[-1] - losses[-2])
+            # Stop if loss change is below threshold
+            if loss_change < threshold:
+                print(f"Converged at iteration {i+1}/{max_iters}")
+                print(f"Loss change: {loss_change:.2e}")
+                break
+        
+        # Optional: Print progress every 100 iterations
+        if (i + 1) % 100 == 0:
+            print(f"Iteration {i+1}/{max_iters}, Loss: {current_loss:.6f}")
+    
+    # Final loss computation
+    final_loss = logistic_loss_function(y, tx, w, lambda_)
+    
+    return w, final_loss
 
-    loss = logistic_loss_function(y, tx, w)
 
-    return w, loss
+def build_k_indices(y, k_fold, seed):
+    """
+    Build k indices for k-fold cross validation.
+    
+    Parameters
+    ----------
+    y : (np.array) Output data points
+    k_fold : (int) Number of folds
+    seed : (int) Random seed
+    
+    Returns
+    -------
+    k_indices : (np.array) k_fold x (N/k_fold) array of indices for each fold
+    """
+    num_row = y.shape[0]
+    interval = int(num_row / k_fold)
+    np.random.seed(seed)
+    indices = np.random.permutation(num_row)
+    k_indices = [indices[k * interval: (k + 1) * interval] for k in range(k_fold)]
+    return np.array(k_indices)
+
+
+def cross_validation_logistic(y, tx, k_indices, k, lambda_, gamma, max_iters=1000):
+    """
+    Cross validation for one fold of regularized logistic regression.
+    
+    Parameters
+    ----------
+    y : (np.array) Labels (0 or 1)
+    tx : (np.array) Features with bias column
+    k_indices : (np.array) k-fold indices
+    k : (int) Current fold
+    lambda_ : (float) Regularization parameter
+    gamma : (float) Learning rate
+    max_iters : (int) Maximum iterations
+    
+    Returns
+    -------
+    loss_tr : (float) Training loss
+    loss_te : (float) Test loss
+    """
+    # Get train and test indices for current fold
+    te_indices = k_indices[k]
+    tr_indices = k_indices[~(np.arange(k_indices.shape[0]) == k)].flatten()
+    
+    # Split data
+    y_tr, tx_tr = y[tr_indices], tx[tr_indices]
+    y_te, tx_te = y[te_indices], tx[te_indices]
+    
+    # Initialize weights
+    initial_w = np.zeros(tx_tr.shape[1])
+    
+    # Train model
+    w, _ = reg_logistic_regression(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma, threshold=1e-6)
+    
+    # Compute losses
+    loss_tr = logistic_loss_function(y_tr, tx_tr, w, lambda_)
+    loss_te = logistic_loss_function(y_te, tx_te, w, lambda_)
+    
+    return loss_tr, loss_te
+
+
+def logistic_cross_validation_demo(y, tx, k_fold, lambdas, gammas, max_iters=1000, seed=12):
+    """
+    Cross validation for regularized logistic regression over lambda and gamma parameters.
+    
+    Parameters
+    ----------
+    y : (np.array) Labels (0 or 1) 
+    tx : (np.array) Features with bias column
+    k_fold : (int) Number of folds
+    lambdas : (np.array) Array of regularization parameters to test
+    gammas : (np.array) Array of learning rates to test
+    max_iters : (int) Maximum iterations for training
+    seed : (int) Random seed
+    
+    Returns
+    -------
+    best_lambda : (float) Best regularization parameter
+    best_gamma : (float) Best learning rate  
+    best_loss : (float) Best validation loss
+    results : (dict) Dictionary containing all results
+    """
+    
+    # Build k-fold indices
+    k_indices = build_k_indices(y, k_fold, seed)
+    
+    # Initialize results storage
+    results = {
+        'lambdas': lambdas,
+        'gammas': gammas,
+        'train_losses': np.zeros((len(lambdas), len(gammas))),
+        'test_losses': np.zeros((len(lambdas), len(gammas)))
+    }
+    
+    best_loss = float('inf')
+    best_lambda = None
+    best_gamma = None
+    
+    print(f"Starting cross-validation with {len(lambdas)} lambdas and {len(gammas)} gammas...")
+    
+    # Grid search over lambda and gamma
+    for i, lambda_ in enumerate(lambdas):
+        for j, gamma in enumerate(gammas):
+            print(f"Testing lambda={lambda_:.1e}, gamma={gamma:.1e}")
+            
+            # Accumulate losses across folds
+            loss_tr_total = 0
+            loss_te_total = 0
+            
+            for fold in range(k_fold):
+                loss_tr, loss_te = cross_validation_logistic(
+                    y, tx, k_indices, fold, lambda_, gamma, max_iters
+                )
+                loss_tr_total += loss_tr
+                loss_te_total += loss_te
+            
+            # Average losses across folds
+            avg_loss_tr = loss_tr_total / k_fold
+            avg_loss_te = loss_te_total / k_fold
+            
+            # Store results
+            results['train_losses'][i, j] = avg_loss_tr
+            results['test_losses'][i, j] = avg_loss_te
+            
+            # Update best parameters
+            if avg_loss_te < best_loss:
+                best_loss = avg_loss_te
+                best_lambda = lambda_
+                best_gamma = gamma
+                
+            print(f"  Avg train loss: {avg_loss_tr:.4f}, Avg test loss: {avg_loss_te:.4f}")
+    
+    print(f"\nBest parameters:")
+    print(f"Lambda: {best_lambda:.1e}")
+    print(f"Gamma: {best_gamma:.1e}")  
+    print(f"Best validation loss: {best_loss:.4f}")
+    
+    return best_lambda, best_gamma, best_loss, results
+

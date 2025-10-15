@@ -13,35 +13,23 @@ def main():
     data_path = "dataset"
     x_train_raw, x_test_raw, y_train_raw, train_ids, test_ids = load_csv_data(data_path)
     
-    # Preprocess the data (fill NaN values and remove highly correlated features)
+    # Preprocess the data (fill NaN, remove correlated features, and normalize)
     print("Preprocessing data...")
     x_train, x_test = preprocess_data(
         x_train_raw, x_test_raw, 
         fill_nan_values=True, 
         strategy='mean', 
-        apply_correlation=True
+        apply_correlation=True,
+        normalize=True  # Enable normalization
     )
-    
-    # Normalize features to prevent numerical instability
-    # Use training data statistics to normalize both train and test
-    feature_means = np.mean(x_train, axis=0)
-    feature_stds = np.std(x_train, axis=0)
-    
-    # Avoid division by zero for constant features
-    feature_stds = np.where(feature_stds == 0, 1, feature_stds)
-    
-    x_train_normalized = (x_train - feature_means) / feature_stds
-    x_test_normalized = (x_test - feature_means) / feature_stds
-    
-    print(f"Features normalized. Mean: {np.mean(x_train_normalized):.6f}, Std: {np.std(x_train_normalized):.6f}")
     
     # Convert labels from {-1, 1} to {0, 1} for logistic regression
     # -1 (no heart disease) → 0, +1 (heart disease) → 1
     y_train = (y_train_raw + 1) / 2  # Converts -1 to 0, +1 to 1
     
     # Add bias column (intercept) to the feature matrices
-    tx_train = np.c_[np.ones((x_train_normalized.shape[0], 1)), x_train_normalized]
-    tx_test = np.c_[np.ones((x_test_normalized.shape[0], 1)), x_test_normalized]
+    tx_train = np.c_[np.ones((x_train.shape[0], 1)), x_train]
+    tx_test = np.c_[np.ones((x_test.shape[0], 1)), x_test]
     
     # Initialize weights with smaller values to prevent overflow
     initial_w = np.zeros(tx_train.shape[1])  # Start with zeros for stability
