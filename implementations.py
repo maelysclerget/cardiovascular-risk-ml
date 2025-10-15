@@ -357,7 +357,7 @@ def cross_validation_logistic(y, tx, k_indices, k, lambda_, gamma, max_iters=100
     """
     # Get train and test indices for current fold
     te_indices = k_indices[k]
-    tr_indices = k_indices[~(np.arange(k_indices.shape[0]) == k)].flatten()
+    tr_indices = np.hstack([k_indices[i] for i in range(len(k_indices)) if i != k])
     
     # Split data
     y_tr, tx_tr = y[tr_indices], tx[tr_indices]

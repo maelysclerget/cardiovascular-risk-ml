@@ -1,7 +1,7 @@
 import numpy as np
 import os
 from helpers import load_csv_data, create_csv_submission
-from implementations import logistic_regression, sigmoid
+from implementations import logistic_regression, sigmoid, logistic_cross_validation_demo, reg_logistic_regression
 from preprocessing import preprocess_data
 
 
@@ -30,25 +30,25 @@ def main():
     # Add bias column (intercept) to the feature matrices
     tx_train = np.c_[np.ones((x_train.shape[0], 1)), x_train]
     tx_test = np.c_[np.ones((x_test.shape[0], 1)), x_test]
+
     
-    # Initialize weights with smaller values to prevent overflow
-    initial_w = np.zeros(tx_train.shape[1])  # Start with zeros for stability
-    
-    # Training parameters - much smaller learning rate for stability
     max_iters = 1000
-    gamma = 0.001  # Reduced from 0.01 to prevent exploding gradients
+    lambdas = [0.01, 0.1, 1, 10]
+    gammas = [0.001, 0.01, 0.1]
     
     # Train the model using logistic regression
     print("Training logistic regression model...")
     print(f"Features after preprocessing: {x_train.shape[1]}")
     print(f"Training samples: {x_train.shape[0]}")
-    print(f"Max iterations: {max_iters}, Learning rate: {gamma}")
+    print(f"Max iterations: {max_iters}")
     
-    w_optimal, loss = logistic_regression(y_train, tx_train, initial_w, max_iters, gamma)
-    print(f"Training completed. Final loss: {loss:.6f}")
+    best_lambda, best_gamma, best_loss, results = logistic_cross_validation_demo(y_train, tx_train, 10, lambdas, gammas, max_iters)
+    print(f"Training completed. Final loss: {best_loss:.6f}")
     
     # Make predictions on test set
     print("Making predictions on test set...")
+    w_initial = np.zeros(tx_train.shape[1])  # Initialize weights for final training
+    w_optimal, loss = reg_logistic_regression(y_train, tx_train, best_lambda, w_initial, max_iters, best_gamma)
     z = tx_test @ w_optimal
     y_pred_prob = sigmoid(z)  # Use numerically stable sigmoid function
     
@@ -66,7 +66,7 @@ def main():
     os.makedirs(submissions_dir, exist_ok=True)
     
     # Create submission file in the submissions folder
-    submission_name = "submission_logistic_regression.csv"
+    submission_name = "submission_logistic_regression_reg_10cv.csv"
     submission_path = os.path.join(submissions_dir, submission_name)
     create_csv_submission(test_ids, y_pred, submission_path)
     print(f"Submission saved as: {submission_path}")
