@@ -1,0 +1,103 @@
+import numpy as np
+from helpers import load_csv_data, create_csv_submission
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+x_train_og, x_test_og, y_train_og, train_ids_og, test_ids_og = load_csv_data("dataset/")
+
+def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', apply_correlation=True):
+    """
+    Preprocess the data by filling NaN values.
+
+    Parameters
+    ----------
+    x_train : np.array
+        Training features
+    x_test : np.array
+        Test features
+    strategy : str
+        Strategy to fill NaN values: 'mean', 'median', 'zero', 'drop'
+
+    Returns
+    -------
+    x_train_processed, x_test_processed : Arrays with NaN values filled
+    """
+    x_train_processed = x_train.copy()
+    x_test_processed = x_test.copy()
+    
+    if fill_nan_values:
+
+        if strategy == 'mean':
+            feature_means = np.nanmean(x_train, axis=0) #nanmean ignores NaN values
+            for col in range(x_train.shape[1]):
+                # Traiter train
+                nan_mask = np.isnan(x_train_processed[:, col]) 
+                x_train_processed[nan_mask, col] = feature_means[col]
+                
+                # Traiter test 
+                nan_mask = np.isnan(x_test_processed[:, col])
+                x_test_processed[nan_mask, col] = feature_means[col]
+
+        elif strategy == 'median':
+            feature_medians = np.nanmedian(x_train, axis=0)
+            for col in range(x_train.shape[1]):
+                # Traiter train
+                nan_mask = np.isnan(x_train_processed[:, col])
+                x_train_processed[nan_mask, col] = feature_medians[col]
+                
+                # Traiter test 
+                nan_mask = np.isnan(x_test_processed[:, col])
+                x_test_processed[nan_mask, col] = feature_medians[col]
+
+        elif strategy == 'zero':
+            x_train_processed[np.isnan(x_train_processed)] = 0
+            x_test_processed[np.isnan(x_test_processed)] = 0
+
+        elif strategy == 'drop':
+            valid_features = ~np.isnan(x_train_processed).any(axis=0) # ~ inverse les boolean
+            x_train_processed = x_train_processed[:, valid_features]
+            x_test_processed = x_test_processed[:, valid_features]
+
+        print(f"Filled NaN values using strategy: {strategy}")
+        print(f"Remaining NaN in training set: {np.sum(np.isnan(x_train_processed))}")
+        print(f"Remaining NaN in test set: {np.sum(np.isnan(x_test_processed))}")
+
+
+    if apply_correlation: 
+        correlation_matrix = np.corrcoef(x_train_processed, rowvar=False)
+        
+        # Visualize correlation matrix
+        plt.figure(figsize=(12, 10))
+        sns.heatmap(correlation_matrix, cmap='coolwarm', annot=False)
+        
+        threshold_high = 0.75
+
+        print(f"Number of features before removing highly correlated features: {x_train_processed.shape[1]}")
+
+        high_corr_pairs = [
+            (i, j)
+            for i in range(correlation_matrix.shape[0])
+            for j in range(i + 1, correlation_matrix.shape[1])
+            if abs(correlation_matrix[i, j]) > threshold_high
+        ]
+        
+        features_to_drop = set()
+        for i, j in high_corr_pairs:
+            features_to_drop.add(j)  # Arbitrarily drop the second feature in the pair
+
+        # Remove the selected features by index
+        features_to_keep = [k for k in range(x_train_processed.shape[1]) if k not in features_to_drop]
+        x_train_processed = x_train_processed[:, features_to_keep]
+        x_test_processed = x_test_processed[:, features_to_keep]
+                
+        print(f"Number of features after removing highly correlated features: {x_train_processed.shape[1]}")
+        print("Highly correlated features:")
+        for i, j in high_corr_pairs:
+            print(f"Feature {i} and Feature {j}: {correlation_matrix[i, j]}")
+        plt.show()
+        
+    return x_train_processed, x_test_processed
+
+
+if __name__ == "__main__":
+    x_train, x_test = preprocess_data(x_train_og, x_test_og, fill_nan_values=True, strategy='mean', apply_correlation=True)
