@@ -264,7 +264,7 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma, threshold=1e-8):
     return w, final_loss
 
 
-def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, threshold=1e-8):
+def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, threshold=1e-8, verbose=True):
     """
     Regularized logistic regression using Gradient Descent (GD) with L2 regularization.
     Includes early stopping based on convergence criteria.
@@ -300,12 +300,13 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, thresho
             loss_change = abs(losses[-1] - losses[-2])
             # Stop if loss change is below threshold
             if loss_change < threshold:
-                print(f"Converged at iteration {i+1}/{max_iters}")
-                print(f"Loss change: {loss_change:.2e}")
+                if verbose:
+                    print(f"Converged at iteration {i+1}/{max_iters}")
+                    print(f"Loss change: {loss_change:.2e}")
                 break
         
         # Optional: Print progress every 100 iterations
-        if (i + 1) % 100 == 0:
+        if verbose and (i + 1) % 100 == 0:
             print(f"Iteration {i+1}/{max_iters}, Loss: {current_loss:.6f}")
     
     # Final loss computation
@@ -366,8 +367,8 @@ def cross_validation_logistic(y, tx, k_indices, k, lambda_, gamma, max_iters=100
     # Initialize weights
     initial_w = np.zeros(tx_tr.shape[1])
     
-    # Train model
-    w, _ = reg_logistic_regression(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma, threshold=1e-6)
+    # Train model (silent mode for CV with looser threshold for speed)
+    w, _ = reg_logistic_regression(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma, threshold=1e-4, verbose=False)
     
     # Compute losses
     loss_tr = logistic_loss_function(y_tr, tx_tr, w, lambda_)
