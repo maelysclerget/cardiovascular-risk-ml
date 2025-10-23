@@ -125,6 +125,6 @@ def basic_data_stats(x_train, y_train):
 
 
 if __name__ == "__main__":
-    x_train, x_test, y_train, train_ids, test_ids = load_data(sub_sample=True)
-    basic_data_stats(x_train, y_train)
-    visualize_data_overview(x_train, y_train)
+    x_train, x_test, y_train, train_ids, test_ids = load_data()
+    #basic_data_stats(x_train, y_train)
+    #visualize_data_overview(x_train, y_train)
