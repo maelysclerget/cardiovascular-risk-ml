@@ -102,7 +102,6 @@ def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', appl
             print(f"Feature {i} and Feature {j}: {correlation_matrix[i, j]}")
         plt.show()
     
-    # Normalize features (z-score normalization) to prevent numerical instability
     if normalize:
         # Use training data statistics to normalize both train and test
         feature_means = np.mean(x_train_processed, axis=0)
