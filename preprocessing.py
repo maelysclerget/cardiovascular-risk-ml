@@ -3,7 +3,7 @@ from helpers import load_csv_data, create_csv_submission
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-x_train_og, x_test_og, y_train_og, train_ids_og, test_ids_og = load_csv_data("dataset/")
+# x_train_og, x_test_og, y_train_og, train_ids_og, test_ids_og = load_csv_data("dataset/")
 
 def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True):
     """
@@ -117,6 +117,66 @@ def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', appl
         
     return x_train_processed, x_test_processed
 
+def one_hot_encode(column):
+    """
+    Convert a categorical column to one-hot encoded representation.
+    
+    This function creates a binary matrix representation of categorical data,
+    where each unique category is represented by a separate binary column.
+    Uses k-1 encoding (drops the last category) to avoid multicollinearity.
+    
+    Parameters
+    ----------
+    column : np.array
+        1D array containing categorical values to be one-hot encoded.
+        Can contain any hashable data type (strings, integers, etc.).
+    
+    Returns
+    -------
+    np.array
+        2D binary matrix of shape (n_samples, n_categories-1) where:
+        - Each row corresponds to a sample from the input column
+        - Each column corresponds to a unique category (except the last one)
+        - Values are 1 if the sample belongs to that category, 0 otherwise
+        - The last category is implicitly represented when all columns are 0
+    
+    Examples
+    --------
+    >>> categories = np.array(['A', 'B', 'C', 'A', 'B']).reshape((5, 1))
+    >>> encoded = one_hot_encode(categories)
+    >>> print(encoded)
+    [[1. 0.]
+     [0. 1.]
+     [0. 0.]
+     [1. 0.]
+     [0. 1.]]
+    """
+    n = column.shape[0]
+    unique_elements = np.unique(column)
 
-if __name__ == "__main__":
-    x_train, x_test = preprocess_data(x_train_og, x_test_og, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True)
+    ohe_matrix = np.zeros(shape = (n, len(unique_elements) - 1))
+    for i in range(n):
+        idx = np.where(unique_elements == column[i])[0][0]
+        if (idx != len(unique_elements) - 1):
+            ohe_matrix[i, idx] = 1
+
+    return ohe_matrix
+
+def undersampling(seed = 42):
+    """
+    TODO: Implement undersampling functionality.
+    """
+    pass
+
+
+def oversampling(seed = 42):
+    """
+    TODO: Implement oversampling functionality.
+    """
+    pass
+
+
+
+
+# if __name__ == "__main__":
+#     x_train, x_test = preprocess_data(x_train_og, x_test_og, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True)
