@@ -119,22 +119,19 @@ def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', appl
 
 def one_hot_encode(column):
     """
-    Convert a categorical column to one-hot encoded representation.
+    Convert a categorical column to one-hot encoded representation using k-1 encoding.
     
     This function creates a binary matrix representation of categorical data,
     where each unique category is represented by a separate binary column.
     Uses k-1 encoding (drops the last category) to avoid multicollinearity.
-    
+
     Parameters
     ----------
-    column : np.array
-        1D array containing categorical values to be one-hot encoded.
-        Can contain any hashable data type (strings, integers, etc.).
-    
+    column : (np.array) (n_samples, 1) 1D array containing categorical values to be encoded 
+
     Returns
     -------
-    np.array
-        2D binary matrix of shape (n_samples, n_categories-1) where:
+    (np.array) (n_samples, n_categories - 1) 2D binary matrix where:
         - Each row corresponds to a sample from the input column
         - Each column corresponds to a unique category (except the last one)
         - Values are 1 if the sample belongs to that category, 0 otherwise
@@ -142,7 +139,7 @@ def one_hot_encode(column):
     
     Examples
     --------
-    >>> categories = np.array(['A', 'B', 'C', 'A', 'B']).reshape((5, 1))
+    >>> categories = np.array(['A', 'B', 'C', 'A', 'B'])
     >>> encoded = one_hot_encode(categories)
     >>> print(encoded)
     [[1. 0.]
@@ -162,18 +159,110 @@ def one_hot_encode(column):
 
     return ohe_matrix
 
-def undersampling(seed = 42):
+def undersampling(train, test, seed = 42):
     """
-    TODO: Implement undersampling functionality.
-    """
-    pass
+    Balance dataset by randomly removing samples from the majority class.
+    
+    This function reduces class imbalance by undersampling the majority class
+    to match the minority class size, creating a balanced dataset.
 
+    Parameters
+    ----------
+    train : (np.array) (n_samples, n_features) Training feature matrix
+    test : (np.array) (n_samples,) Target labels corresponding to training data
+    seed : (int) Random seed for reproducible sampling
 
-def oversampling(seed = 42):
+    Returns
+    -------
+    (tuple) (train_reduced, test_reduced) where:
+        - train_reduced: (np.array) Training data with majority class samples removed
+        - test_reduced: (np.array) Corresponding labels with majority class samples removed
+    
+    Examples
+    --------
+    >>> np.random.seed(42)
+    >>> X = np.random.rand(100, 3)
+    >>> y = np.array([0]*20 + [1]*80)  # Imbalanced: 20 class 0, 80 class 1
+    >>> X_bal, y_bal = undersampling(X, y, seed=42)
+    >>> np.unique(y_bal, return_counts=True)
+    (array([0, 1]), array([20, 20]))
+    
+    Notes
+    -----
+    - Randomly selects samples to drop from majority class
+    - Maintains all minority class samples
+    - May result in loss of potentially useful information from majority class
     """
-    TODO: Implement oversampling functionality.
+    values, counts = np.unique(test, return_counts=True)
+
+    lower = counts[np.argmin(counts)]
+    higher = counts[np.argmax(counts)]
+    high_val = values[np.argmax(counts)]
+
+    high_idx = np.where(test == high_val)[0]
+
+    fold = np.floor(higher/lower)
+    n_drop = np.floor((fold - 1)*higher/fold)
+
+    rng = np.random.default_rng(seed)
+    drop_columns_idx = rng.choice(high_idx, size=int(n_drop), replace=False)
+
+    train_reduced = np.delete(train, drop_columns_idx, axis=0)
+    test_reduced = np.delete(test, drop_columns_idx, axis=0)
+
+    return train_reduced, test_reduced
+
+def oversampling(train, test):
     """
-    pass
+    Balance dataset by duplicating samples from the minority class.
+    
+    This function reduces class imbalance by oversampling the minority class
+    to match the majority class size, creating a balanced dataset.
+
+    Parameters
+    ----------
+    train : (np.array) (n_samples, n_features) Training feature matrix
+    test : (np.array) (n_samples,) Target labels corresponding to training data
+
+    Returns
+    -------
+    (tuple) (train_augmented, test_augmented) where:
+        - train_augmented: (np.array) Training data with minority class samples duplicated
+        - test_augmented: (np.array) Corresponding labels with minority class samples duplicated
+    
+    Examples
+    --------
+    >>> np.random.seed(42)
+    >>> X = np.random.rand(30, 2)
+    >>> y = np.array([0]*10 + [1]*20)  # Imbalanced: 10 class 0, 20 class 1
+    >>> X_bal, y_bal = oversampling(X, y)
+    >>> np.unique(y_bal, return_counts=True)
+    (array([0, 1]), array([20, 20]))
+    
+    Notes
+    -----
+    - Duplicates minority class samples to match majority class count
+    - Maintains all original samples from both classes
+    - May lead to overfitting due to exact duplicates
+    - Consider more sophisticated techniques like SMOTE for better results
+    """
+    values, counts = np.unique(test, return_counts=True)
+
+    lower = counts[np.argmin(counts)]
+    low_val = values[np.argmin(counts)]
+    higher = counts[np.argmax(counts)]
+
+    low_idx = np.where(test == low_val)[0]
+
+    fold = np.floor(higher/lower)
+
+    train_duplicated_points = np.repeat(train[low_idx], int(fold - 1), axis=0)
+    test_duplicated_points = np.repeat(test[low_idx], int(fold - 1), axis=0)
+
+    train_augmented = np.concatenate((train, train_duplicated_points), axis=0)
+    test_augmented = np.concatenate((test, test_duplicated_points), axis=0)
+
+    return train_augmented, test_augmented
 
 
 
