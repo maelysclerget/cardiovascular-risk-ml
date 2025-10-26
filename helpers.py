@@ -27,19 +27,21 @@ def build_poly(x, idx, degree):
     >>> idx = np.array([0, 1])
     >>> degree = 2
     >>> build_poly(x, idx, degree)
-    array([[ 7,  1,  2,  1,  2,  4],
-           [ 9,  3,  4,  9, 12, 16]])
+    array([[ 1,  2,  1,  2,  4,  7],
+           [ 3,  4,  9, 12, 16,  9]])
     """
     x_basis = x[:, idx]
-    _, d = x_basis.shape
+    d = x_basis.shape[1]
     features = []
+
     for deg in range(1, degree + 1):
         for combination in combinations_with_replacement(range(d), deg):
             feature = np.prod(x_basis[:, combination], axis=1)
             features.append(feature)
+            
     poly_expansion = np.column_stack(features)
     x_rest = np.delete(x, idx, axis = 1)
-    return np.concatenate([x_rest, poly_expansion], axis=1)
+    return np.concatenate([poly_expansion, x_rest], axis=1)
 
 
 
