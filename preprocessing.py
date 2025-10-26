@@ -186,12 +186,6 @@ def undersampling(train, test, seed = 42):
     >>> X_bal, y_bal = undersampling(X, y, seed=42)
     >>> np.unique(y_bal, return_counts=True)
     (array([0, 1]), array([20, 20]))
-    
-    Notes
-    -----
-    - Randomly selects samples to drop from majority class
-    - Maintains all minority class samples
-    - May result in loss of potentially useful information from majority class
     """
     values, counts = np.unique(test, return_counts=True)
 
@@ -238,13 +232,6 @@ def oversampling(train, test):
     >>> X_bal, y_bal = oversampling(X, y)
     >>> np.unique(y_bal, return_counts=True)
     (array([0, 1]), array([20, 20]))
-    
-    Notes
-    -----
-    - Duplicates minority class samples to match majority class count
-    - Maintains all original samples from both classes
-    - May lead to overfitting due to exact duplicates
-    - Consider more sophisticated techniques like SMOTE for better results
     """
     values, counts = np.unique(test, return_counts=True)
 
