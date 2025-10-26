@@ -1,5 +1,6 @@
 import numpy as np
-
+from helpers import build_poly
+from preprocessing import oversampling, undersampling
 
 def mean_squared_error_loss(y, tx, w):
     """
@@ -328,6 +329,12 @@ def build_k_indices(y, k_fold, seed):
     Returns
     -------
     k_indices : (np.array) k_fold x (N/k_fold) array of indices for each fold
+
+    Examples 
+    --------
+    >>> build_k_indices(np.array([1., 2., 3., 4.]), 2, 1)
+    array([[3, 2],
+           [0, 1]])
     """
     num_row = y.shape[0]
     interval = int(num_row / k_fold)
@@ -337,47 +344,84 @@ def build_k_indices(y, k_fold, seed):
     return np.array(k_indices)
 
 
-def cross_validation_logistic(y, tx, k_indices, k, lambda_, gamma, max_iters=1000):
+def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling = None, cutoff = 0.5, max_iters=1000):
     """
     Cross validation for one fold of regularized logistic regression.
-    
+
+    Trains a regularized logistic regression model on the training fold, evaluates on the test fold,
+    and computes loss, precision, recall, and F1-score for both sets.
+
     Parameters
     ----------
     y : (np.array) Labels (0 or 1)
     tx : (np.array) Features with bias column
     k_indices : (np.array) k-fold indices
+    normalized_cols_idx : (np.array) Indices of normalized columns for polynomial expansion
+    sampling : (str or None) Sampling method: None, 'oversampling', or 'undersampling'
+    degree : (int) Degree for polynomial expansion
     k : (int) Current fold
     lambda_ : (float) Regularization parameter
     gamma : (float) Learning rate
+    cutoff : (float) Threshold for converting predicted probabilities to class labels (default: 0.5)
     max_iters : (int) Maximum iterations
-    
+
     Returns
     -------
-    loss_tr : (float) Training loss
-    loss_te : (float) Test loss
+    (tuple):
+        - loss_tr : (float) Training loss
+        - loss_te : (float) Test loss
+        - metrics_tr : (dict) Precision, recall, and F1-score for training set
+        - metrics_te : (dict) Precision, recall, and F1-score for test set
     """
     # Get train and test indices for current fold
     te_indices = k_indices[k]
     tr_indices = np.hstack([k_indices[i] for i in range(len(k_indices)) if i != k])
-    
+
     # Split data
-    y_tr, tx_tr = y[tr_indices], tx[tr_indices]
-    y_te, tx_te = y[te_indices], tx[te_indices]
-    
+    y_tr, tx_tr = y[tr_indices], build_poly(tx[tr_indices], normalized_cols_idx, degree)
+    y_te, tx_te = y[te_indices], build_poly(tx[te_indices], normalized_cols_idx, degree)
+
+    if sampling == None:
+        pass
+    elif sampling == "oversampling":
+        tx_tr, y_tr = oversampling(tx_tr, y_tr)
+    elif sampling == "undersampling":
+        tx_tr, y_tr = undersampling(tx_tr, y_tr)
+    else:
+        raise ValueError("Incorrect sampling method")
+
     # Initialize weights
     initial_w = np.zeros(tx_tr.shape[1])
-    
+
     # Train model (silent mode for CV with looser threshold for speed)
     w, _ = reg_logistic_regression(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma, threshold=1e-4, verbose=False)
-    
-    # Compute losses
-    loss_tr = logistic_loss_function(y_tr, tx_tr, w, lambda_)
-    loss_te = logistic_loss_function(y_te, tx_te, w, lambda_)
-    
-    return loss_tr, loss_te
+
+    # Predict labels (threshold = cutoff)
+    def predict_labels(tx, w, ):
+        probs = sigmoid(tx @ w)
+        return (probs >= cutoff).astype(int)
+
+    y_tr_pred = predict_labels(tx_tr, w)
+    y_te_pred = predict_labels(tx_te, w)
+
+    def precision_recall_f1(y_true, y_pred):
+        tp = np.sum((y_true == 1) & (y_pred == 1))
+        fp = np.sum((y_true == 0) & (y_pred == 1))
+        fn = np.sum((y_true == 1) & (y_pred == 0))
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+        return {"precision": precision, "recall": recall, "f1": f1}
+
+    metrics_tr = precision_recall_f1(y_tr, y_tr_pred)
+    metrics_te = precision_recall_f1(y_te, y_te_pred)
+    metrics_tr["loss"] = logistic_loss_function(y_tr, tx_tr, w, lambda_)
+    metrics_te["loss"] = logistic_loss_function(y_te, tx_te, w, lambda_)    
+
+    return metrics_tr, metrics_te
 
 
-def logistic_cross_validation_demo(y, tx, k_fold, lambdas, gammas, max_iters=1000, seed=12):
+def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, lambdas, gammas, samplings, cutoffs, max_iters=1000, seed=12):
     """
     Cross validation for regularized logistic regression over lambda and gamma parameters.
     

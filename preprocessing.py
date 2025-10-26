@@ -3,7 +3,7 @@ from helpers import load_csv_data, create_csv_submission
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-x_train_og, x_test_og, y_train_og, train_ids_og, test_ids_og = load_csv_data("dataset/")
+# x_train_og, x_test_og, y_train_og, train_ids_og, test_ids_og = load_csv_data("dataset/")
 
 def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True):
     """
@@ -265,7 +265,7 @@ def OHE_data(x_train, x_test, idx):
 
     return np.column_stack(OHE_features_train), np.column_stack(OHE_features_test)
 
-def undersampling(train, test, seed = 42):
+def undersampling(x, y, seed = 42):
     """
     Balance dataset by randomly removing samples from the majority class.
     
@@ -274,15 +274,15 @@ def undersampling(train, test, seed = 42):
 
     Parameters
     ----------
-    train : (np.array) (n_samples, n_features) Training feature matrix
-    test : (np.array) (n_samples,) Target labels corresponding to training data
+    x : (np.array) (n_samples, n_features) Input feature matrix
+    y : (np.array) (n_samples,) Target labels corresponding to training data
     seed : (int) Random seed for reproducible sampling
 
     Returns
     -------
     (tuple) (train_reduced, test_reduced) where:
-        - train_reduced: (np.array) Training data with majority class samples removed
-        - test_reduced: (np.array) Corresponding labels with majority class samples removed
+        - x_reduced: (np.array) Input data with majority class samples removed
+        - y_reduced: (np.array) Corresponding labels with majority class samples removed
     
     Examples
     --------
@@ -293,13 +293,13 @@ def undersampling(train, test, seed = 42):
     >>> np.unique(y_bal, return_counts=True)
     (array([0, 1]), array([20, 20]))
     """
-    values, counts = np.unique(test, return_counts=True)
+    values, counts = np.unique(y, return_counts=True)
 
     lower = counts[np.argmin(counts)]
     higher = counts[np.argmax(counts)]
     high_val = values[np.argmax(counts)]
 
-    high_idx = np.where(test == high_val)[0]
+    high_idx = np.where(y == high_val)[0]
 
     fold = np.floor(higher/lower)
     n_drop = np.floor((fold - 1)*higher/fold)
@@ -307,12 +307,12 @@ def undersampling(train, test, seed = 42):
     rng = np.random.default_rng(seed)
     drop_columns_idx = rng.choice(high_idx, size=int(n_drop), replace=False)
 
-    train_reduced = np.delete(train, drop_columns_idx, axis=0)
-    test_reduced = np.delete(test, drop_columns_idx, axis=0)
+    x_reduced = np.delete(x, drop_columns_idx, axis=0)
+    y_reduced = np.delete(y, drop_columns_idx, axis=0)
 
-    return train_reduced, test_reduced
+    return x_reduced, y_reduced
 
-def oversampling(train, test):
+def oversampling(x, y):
     """
     Balance dataset by duplicating samples from the minority class.
     
@@ -321,14 +321,14 @@ def oversampling(train, test):
 
     Parameters
     ----------
-    train : (np.array) (n_samples, n_features) Training feature matrix
-    test : (np.array) (n_samples,) Target labels corresponding to training data
+    x : (np.array) (n_samples, n_features) Input feature matrix
+    y : (np.array) (n_samples,) Target labels corresponding to training data
 
     Returns
     -------
     (tuple) (train_augmented, test_augmented) where:
-        - train_augmented: (np.array) Training data with minority class samples duplicated
-        - test_augmented: (np.array) Corresponding labels with minority class samples duplicated
+        - x_augmented: (np.array) Input data with minority class samples duplicated
+        - y_augmented: (np.array) Corresponding labels with minority class samples duplicated
     
     Examples
     --------
@@ -339,23 +339,23 @@ def oversampling(train, test):
     >>> np.unique(y_bal, return_counts=True)
     (array([0, 1]), array([20, 20]))
     """
-    values, counts = np.unique(test, return_counts=True)
+    values, counts = np.unique(y, return_counts=True)
 
     lower = counts[np.argmin(counts)]
     low_val = values[np.argmin(counts)]
     higher = counts[np.argmax(counts)]
 
-    low_idx = np.where(test == low_val)[0]
+    low_idx = np.where(y == low_val)[0]
 
     fold = np.floor(higher/lower)
 
-    train_duplicated_points = np.repeat(train[low_idx], int(fold - 1), axis=0)
-    test_duplicated_points = np.repeat(test[low_idx], int(fold - 1), axis=0)
+    x_duplicated_points = np.repeat(x[low_idx], int(fold - 1), axis=0)
+    y_duplicated_points = np.repeat(y[low_idx], int(fold - 1), axis=0)
 
-    train_augmented = np.concatenate((train, train_duplicated_points), axis=0)
-    test_augmented = np.concatenate((test, test_duplicated_points), axis=0)
+    x_augmented = np.concatenate((x, x_duplicated_points), axis=0)
+    y_augmented = np.concatenate((y, y_duplicated_points), axis=0)
 
-    return train_augmented, test_augmented
+    return x_augmented, y_augmented
 
 
 def preprocessing_pipeline(x_train, x_test, OHE_idx, normalization_idx, apply_correlation = True, corr_threshold = 0.75):   
@@ -438,7 +438,7 @@ def preprocessing_pipeline(x_train, x_test, OHE_idx, normalization_idx, apply_co
 
     return x_train_processed, x_test_processed, normalized_cols_idx
 
-if __name__ == "__main__":
-    x_train, x_test = preprocess_data(x_train_og, x_test_og, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True)
+# if __name__ == "__main__":
+    # x_train, x_test = preprocess_data(x_train_og, x_test_og, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True)
     # x_train, x_test, normalized_cols_idx = preprocessing_pipeline(x_train_og, x_test_og, OHE_idx = [0, 1, 2], normalization_idx = [3, 4])
 
