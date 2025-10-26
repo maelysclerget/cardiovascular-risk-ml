@@ -12,17 +12,14 @@ def build_poly(x, idx, degree):
 
     Parameters
     ----------
-    x : np.array, shape (N, D)
-        Input data.
-    idx : list or np.array
-        Indices of features to use for expansion.
-    degree : int
-        Maximum degree of polynomial features.
+    x : (np.array) (n_samples, num_features) Input data.
+    idx : (list or np.array) Indices of features to use for expansion.
+    degree : (int) Maximum degree of polynomial features.
 
     Returns
     -------
-    np.array, shape (N, D + n_poly_features)
-        Original data with polynomial and cross terms of selected features up to the given degree appended as new columns.
+    (np.array) (n_samples, num_features + num_poly_features) 
+    Original data with polynomial and cross terms of selected features up to the given degree appended as new columns.
 
     Examples
     --------
