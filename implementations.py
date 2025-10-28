@@ -197,6 +197,26 @@ def logistic_loss_function(y, tx, w, lambda_=0):
     loss = ((-y.T @ z) + np.sum(np.log(1 + np.exp(z)))) / n + lambda_ * np.sum(w * w)
     return loss
 
+def logisitc_loss_function_l1(y, tx, w, lambda_=0):
+    """
+    Logistic regression loss function with L1 regularization.
+
+    Parameters
+    ----------
+    y : (np.array) Output data points
+    tx : (np.array) Input data points
+    w : (np.array) Weights
+    lambda_ : (float) Regularization parameter
+
+    Returns
+    -------
+    (float) Logistic regression loss with L1 penalty:
+    """
+    n = tx.shape[0]  # Number of samples
+    z = tx @ w
+    loss = ((-y.T @ z) + np.sum(np.log(1 + np.exp(z)))) / n + lambda_ * np.sum(np.abs(w))
+    return loss
+
 
 def compute_gradient_LR(y, tx, w, lambda_=0):
     """
@@ -211,10 +231,28 @@ def compute_gradient_LR(y, tx, w, lambda_=0):
 
     Returns
     -------
-    (np.array) Gradient vector of shape (d, 1), given by:
+    (np.array) Gradient vector of shape (d, 1)
     """
     n = tx.shape[0]  # Number of samples
     return (tx.T @ (sigmoid(tx @ w) - y)) / n + 2 * lambda_ * w
+
+def compute_gradient_LR_l1(y, tx, w, lambda_=0):
+    """"
+    Gradient of the logistic regression loss with L1 regularization.    
+
+    Parameters  
+    ----------
+    y : (np.array) Output data points
+    tx : (np.array) Input data points
+    w : (np.array) Weights
+    lambda_ : (float) Regularization parameter
+
+    Returns
+    -------
+    (np.array) Gradient vector of shape (d, 1)
+    """
+    n = tx.shape[0]  # Number of samples
+    return (tx.T @ (sigmoid(tx @ w) - y)) / n + lambda_ * np.sign(w)
 
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma, threshold=1e-8):
@@ -265,7 +303,6 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma, threshold=1e-8):
     
     return w, final_loss
 
-
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, threshold=1e-8, verbose=True):
     """
     Regularized logistic regression using Gradient Descent (GD) with L2 regularization.
@@ -313,6 +350,56 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, thresho
     
     # Final loss computation
     final_loss = logistic_loss_function(y, tx, w, lambda_)
+    
+    return w, final_loss
+
+def reg_logistic_regression_l1(y, tx, lambda_, initial_w, max_iters, gamma, threshold=1e-8, verbose=True):
+    """
+    Regularized logistic regression using Gradient Descent (GD) with L1 regularization.
+    Includes early stopping based on convergence criteria.
+
+    Parameters
+    ----------
+    y : (np.array) Output data points (0 or 1)
+    tx : (np.array) Input data points
+    lambda_ : (float) Regularization parameter
+    initial_w : (np.array) Initial weights
+    max_iters : (int) Maximal number of iterations
+    gamma : (float) Learning rate
+    threshold : (float) Convergence threshold for early stopping
+
+    Returns
+    -------
+    (np.array, float) Final weights and their corresponding loss
+    """
+    w = initial_w.copy()
+    losses = []
+    
+    for i in range(max_iters):
+        # Compute current loss
+        current_loss = logisitc_loss_function_l1(y, tx, w, lambda_)
+        losses.append(current_loss)
+        
+        # Compute gradient and update weights
+        gradient = compute_gradient_LR_l1(y, tx, w, lambda_)
+        w = w - gamma * gradient
+        
+        # Check for convergence based on loss change (if we have previous loss)
+        if i > 0:
+            loss_change = abs(losses[-1] - losses[-2])
+            # Stop if loss change is below threshold
+            if loss_change < threshold:
+                if verbose:
+                    print(f"Converged at iteration {i+1}/{max_iters}")
+                    print(f"Loss change: {loss_change:.2e}")
+                break
+        
+        # Optional: Print progress every 100 iterations
+        if verbose and (i + 1) % 100 == 0:
+            print(f"Iteration {i+1}/{max_iters}, Loss: {current_loss:.6f}")
+    
+    # Final loss computation
+    final_loss = logisitc_loss_function_l1(y, tx, w, lambda_)
     
     return w, final_loss
 
