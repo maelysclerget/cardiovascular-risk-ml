@@ -345,17 +345,49 @@ def build_k_indices(y, k_fold, seed):
     return np.array(k_indices)
 
 def predict_labels(tx, w, cutoff):
+    """
+    Predict class labels (1 or -1) using model weights and a probability cutoff.
+
+    Parameters
+    ----------
+    tx : np.array
+        Feature matrix of shape (n_samples, n_features).
+    w : np.array
+        Model weights of shape (n_features,) or (n_features, 1).
+    cutoff : float
+        Probability threshold for assigning class 1 (otherwise -1).
+
+    Returns
+    -------
+    np.array
+        Predicted labels (1 or -1) of shape (n_samples,).
+    """
     probs = sigmoid(tx @ w)
     return np.where(probs >= cutoff, 1, -1)
 
 def precision_recall_f1(y_true, y_pred):
-        tp = np.sum((y_true ==  1) & (y_pred ==  1))
-        fp = np.sum((y_true == -1) & (y_pred ==  1))
-        fn = np.sum((y_true ==  1) & (y_pred == -1))
-        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
-        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
-        return {"precision": precision, "recall": recall, "f1": f1}
+    """
+    Compute precision, recall, and F1-score for binary classification.
+
+    Parameters
+    ----------
+    y_true : np.array
+        True labels (1 or -1) of shape (n_samples,).
+    y_pred : np.array
+        Predicted labels (1 or -1) of shape (n_samples,).
+
+    Returns
+    -------
+    dict
+        Dictionary with keys 'precision', 'recall', and 'f1' (all floats).
+    """
+    tp = np.sum((y_true ==  1) & (y_pred ==  1))
+    fp = np.sum((y_true == -1) & (y_pred ==  1))
+    fn = np.sum((y_true ==  1) & (y_pred == -1))
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+    return {"precision": precision, "recall": recall, "f1": f1}
 
 def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling = None, cutoff = 0.5, max_iters=1000):
     """
@@ -422,24 +454,44 @@ def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, 
 
 def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, lambdas, gammas, samplings, cutoffs, max_iters=1000, seed=42):
     """
-    Cross validation for regularized logistic regression over lambda and gamma parameters.
-    
+    Perform grid search cross-validation for regularized logistic regression.
+
+    For each combination of degree, lambda, gamma, sampling method, and cutoff, performs k-fold cross-validation
+    and computes average training/validation loss and F1-score. Returns the best parameter sets by F1-score and loss.
+
     Parameters
     ----------
-    y : (np.array) Labels (0 or 1) 
-    tx : (np.array) Features with bias column
-    k_fold : (int) Number of folds
-    lambdas : (np.array) Array of regularization parameters to test
-    gammas : (np.array) Array of learning rates to test
-    max_iters : (int) Maximum iterations for training
-    seed : (int) Random seed
-    
+    y : np.array
+        True labels (0 or 1) of shape (n_samples,).
+    tx : np.array
+        Feature matrix (with bias column) of shape (n_samples, n_features).
+    k_fold : int
+        Number of folds for cross-validation.
+    normalized_cols_idx : list or np.array
+        Indices of columns to normalize.
+    degrees : iterable
+        Degrees of polynomial feature expansion to test.
+    lambdas : iterable
+        Regularization parameters to test.
+    gammas : iterable
+        Learning rates to test.
+    samplings : iterable
+        Sampling strategies to test (e.g., None, 'undersample', 'oversample').
+    cutoffs : iterable
+        Cutoff thresholds for classification to test.
+    max_iters : int, optional
+        Maximum number of iterations for training (default: 1000).
+    seed : int, optional
+        Random seed for reproducibility (default: 42).
+
     Returns
     -------
-    best_lambda : (float) Best regularization parameter
-    best_gamma : (float) Best learning rate  
-    best_loss : (float) Best validation loss
-    results : (dict) Dictionary containing all results
+    best_f1_result : dict
+        Parameter set and metrics with the highest average validation F1-score.
+    best_loss_result : dict
+        Parameter set and metrics with the lowest average validation loss.
+    results : list of dict
+        List of dictionaries with all parameter combinations and their average metrics.
     """
     
     # Build k-fold indices
