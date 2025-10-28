@@ -533,15 +533,15 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
             "avg_f1_te": total_f1_te / k_fold
         })
 
-    avg_f1_te = np.array([r["avg_f1_te"] for r in results])
-    avg_loss_te = np.array([r["avg_loss_te"] for r in results])
+    avg_f1_te_array = np.array([res["avg_f1_te"] for res in results])
+    avg_loss_te_array = np.array([res["avg_loss_te"] for res in results])
 
     # Best F1 (maximize)
-    best_f1_idx = np.argmax(avg_f1_te)
+    best_f1_idx = np.argmax(avg_f1_te_array)
     best_f1_result = results[best_f1_idx]
 
     # Best loss (minimize)
-    best_loss_idx = np.argmin(avg_loss_te)
+    best_loss_idx = np.argmin(avg_loss_te_array)
     best_loss_result = results[best_loss_idx]
 
     print("Best by F1 (avg_f1_te):")

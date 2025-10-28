@@ -123,6 +123,51 @@ def basic_data_stats(x_train, y_train):
     print(f"Label counts: {counts}")
     print(f"Class balance: {counts[1]/counts[0]:.2f} (pos/neg ratio)")
 
+def plot_metrics_vs_hyperparameter(results_list, hyperparameter_name, metric_name):
+    """
+    Plot a given metric against a given hyperparameter.
+    
+    Parameters
+    ----------
+    results_list : list of dicts
+        Each dict contains hyperparameters values and metrics.
+    hyperparameter_name : str
+        Name of the hyperparameter to plot on x-axis.
+    metric_names : list of str
+        List of metric names to plot on y-axis.
+    """
+    metric_array = np.array([res[metric_name] for res in results_list])
+    hyperparameter_array = np.array([res[hyperparameter_name] for res in results_list])
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(hyperparameter_array, metric_array, marker='o')
+    plt.xlabel(hyperparameter_name)
+    plt.ylabel(metric_name)
+    plt.title(f'{metric_name} vs {hyperparameter_name}')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+def plot_metric(results_list, metric_name):
+    """
+    Plot a given metric over all different hyperparameter combinations.
+    
+    Parameters
+    ----------
+    results_list : list of dicts
+        Each dict contains metrics.
+    metric_name : str
+        Name of the metric to plot.
+    """
+    metric_array = np.array([res[metric_name] for res in results_list])
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(metric_array, marker='o')
+    plt.xlabel('Hyperparameter Combination Index')
+    plt.ylabel(metric_name)
+    plt.title(f'{metric_name} over Hyperparameter Combination Index')
+    plt.grid(True)
+    plt.show()
 
 if __name__ == "__main__":
     x_train, x_test, y_train, train_ids, test_ids = load_data()
