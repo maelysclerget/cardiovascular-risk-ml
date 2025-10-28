@@ -10,16 +10,32 @@ def main():
     Main function to create a submission using logistic regression for classification.
     """
     # Load the data
-    data_path = "dataset"
-    x_train_raw, x_test_raw, y_train_raw, train_ids, test_ids = load_csv_data(data_path)
-    
+    y_train_raw = np.genfromtxt(
+        os.path.join('data', 'processed', 'dataset_features_removed', "y_train.csv"),
+        delimiter=",",
+        skip_header=1,
+        dtype=int,
+        usecols=1,
+    )
+    x_train_raw_ = np.genfromtxt(
+        os.path.join('data', 'processed', 'dataset_features_removed', "x_train_filled.csv"), delimiter=",", skip_header=1
+    )
+    x_test_raw_ = np.genfromtxt(
+        os.path.join('data', 'processed', 'dataset_features_removed', "x_test_filled.csv"), delimiter=",", skip_header=1
+    )
+
+    train_ids = x_train_raw_[:, 0].astype(dtype=int)
+    test_ids = x_test_raw_[:, 0].astype(dtype=int)
+    x_train_raw = x_train_raw_[:, 1:]
+    x_test_raw = x_test_raw_[:, 1:]
+
     # Preprocess the data (fill NaN, remove correlated features, and normalize)
     print("Preprocessing data...")
     x_train, x_test = preprocess_data(
         x_train_raw, x_test_raw, 
-        fill_nan_values=True, 
+        fill_nan_values=False, 
         strategy='mean', 
-        apply_correlation=True,
+        apply_correlation=False,
         normalize=True  # Enable normalization
     )
     
@@ -32,27 +48,64 @@ def main():
     tx_test = np.c_[np.ones((x_test.shape[0], 1)), x_test]
 
     
-    # OPTIMIZED PARAMETERS FOR SPEED
-    max_iters = 300              # Reduced from 1000 (3x faster)
-    lambdas = np.array([0.1, 1.0])     # Reduced from 4 to 2 values (2x faster)
-    gammas = np.array([0.001, 0.01])   # Reduced from 3 to 2 values (1.5x faster)
-    k_fold = 5                   # Reduced from 10 to 5 folds (2x faster)
+    # PARAMETERS FOR BALANCED CROSS-VALIDATION
+    max_iters = 500              # Keep good convergence
+    # Reduced parameter grid
+    lambdas = np.logspace(-3, 1, 8)   # 8 values from 0.001 to 10
+    gammas = np.logspace(-4, -1, 6)   # 6 values from 0.0001 to 0.1
+    k_fold = 10                  # Keep robust validation
     
-    # Train the model using logistic regression
-    print("Training logistic regression model with FAST CV settings...")
+    # Reduced number of initializations
+    w_inits = [
+        np.zeros(tx_train.shape[1]),  # Zero initialization (standard)
+        np.random.normal(0, 0.01, tx_train.shape[1]),  # Small random normal
+        np.ones(tx_train.shape[1]) * 0.01,  # Small constant
+    ]
+    
+    # Train the model using logistic regression with multiple initializations
+    print("Training logistic regression model with EXTENSIVE CV settings...")
+    print(f"Number of different initializations: {len(w_inits)}")
     print(f"Features after preprocessing: {x_train.shape[1]}")
     print(f"Training samples: {x_train.shape[0]}")
     print(f"Max iterations: {max_iters}, K-folds: {k_fold}")
     print(f"Parameter combinations: {len(lambdas)} × {len(gammas)} = {len(lambdas)*len(gammas)}")
     print(f"Total CV runs: {len(lambdas)*len(gammas)*k_fold} = {len(lambdas)*len(gammas)*k_fold}")
     
-    best_lambda, best_gamma, best_loss, results = logistic_cross_validation_demo(y_train, tx_train, k_fold, lambdas, gammas, max_iters)
-    print(f"Training completed. Final loss: {best_loss:.6f}")
+    # Try each initialization
+    best_overall_lambda = None
+    best_overall_gamma = None
+    best_overall_loss = float('inf')
+    best_overall_w = None
     
-    # Make predictions on test set
-    print("Making predictions on test set...")
-    w_initial = np.zeros(tx_train.shape[1])  # Initialize weights for final training
-    w_optimal, loss = reg_logistic_regression(y_train, tx_train, best_lambda, w_initial, max_iters, best_gamma, verbose=False)
+    for init_idx, w_init in enumerate(w_inits):
+        print(f"\nTrying initialization {init_idx + 1}/{len(w_inits)}...")
+        best_lambda, best_gamma, best_loss, results = logistic_cross_validation_demo(
+            y_train, tx_train, k_fold, lambdas, gammas, max_iters, initial_w=w_init, seed=42+init_idx
+        )
+        print(f"Init {init_idx + 1} completed. Loss: {best_loss:.6f}")
+        
+        if best_loss < best_overall_loss:
+            best_overall_loss = best_loss
+            best_overall_lambda = best_lambda
+            best_overall_gamma = best_gamma
+            best_overall_w = w_init
+            print(f"New best initialization found!")
+    
+    print(f"\nBest overall results:")
+    print(f"Lambda: {best_overall_lambda:.6f}")
+    print(f"Gamma: {best_overall_gamma:.6f}")
+    print(f"Loss: {best_overall_loss:.6f}")
+    
+    # Make predictions on test set using best parameters
+    print("\nMaking predictions on test set...")
+    w_optimal, loss = reg_logistic_regression(
+        y_train, tx_train, 
+        best_overall_lambda, 
+        best_overall_w, 
+        max_iters, 
+        best_overall_gamma, 
+        verbose=False
+    )
     
     # Get probabilities for training set to optimize threshold for F1
     print("Optimizing threshold for F1 score...")
@@ -60,7 +113,7 @@ def main():
     y_train_prob = sigmoid(z_train)
     
     # Test different thresholds to maximize F1 on training set
-    thresholds = np.arange(0.1, 0.9, 0.05)  # Test thresholds from 0.1 to 0.85
+    thresholds = np.arange(0.25, 0.76, 0.01)  # More fine-grained threshold search
     best_f1 = 0
     best_threshold = 0.5
     
@@ -104,11 +157,11 @@ def main():
     print(f"Probabilities < {best_threshold:.3f} → no heart disease (-1)")
     
     # Create submissions directory if it doesn't exist
-    submissions_dir = "submissions"
+    submissions_dir = 'submissions'
     os.makedirs(submissions_dir, exist_ok=True)
     
-    # Create submission file in the submissions folder
-    submission_name = f"submission_reg_logistic_f1_optimized_th{best_threshold:.3f}_10cv.csv"
+    # Create submission file in the results/submissions folder
+    submission_name = f"submission_reg_logistic_f1_optimized_th{best_threshold:.3f}_extCV.csv"
     submission_path = os.path.join(submissions_dir, submission_name)
     create_csv_submission(test_ids, y_pred, submission_path)
     print(f"Submission saved as: {submission_path}")
