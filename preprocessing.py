@@ -8,25 +8,32 @@ import seaborn as sns
 def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True):
     """
     Preprocess the data by filling NaN values, removing correlated features, and normalizing.
+    
+    This function applies a sequence of preprocessing steps to the input data, including:
+    - Filling NaN values using a specified strategy
+    - Removing highly correlated features
+    - Normalizing features (z-score normalization)
 
     Parameters
     ----------
-    x_train : np.array
+    x_train : (np.array) (n_samples, n_features)
         Training features
-    x_test : np.array
+    x_test : (np.array) (n_samples, n_features)
         Test features
-    fill_nan_values : bool
+    fill_nan_values : (bool)
         Whether to fill NaN values
-    strategy : str
+    strategy : (str)
         Strategy to fill NaN values: 'mean', 'median', 'zero', 'drop'
-    apply_correlation : bool
+    apply_correlation : (bool)
         Whether to remove highly correlated features
-    normalize : bool
+    normalize : (bool)
         Whether to normalize features (z-score normalization)
 
     Returns
     -------
-    x_train_processed, x_test_processed : Arrays with processed features
+    (tuple) (x_train_processed, x_test_processed) where:
+        - x_train_processed: (np.array) Preprocessed training features
+        - x_test_processed: (np.array) Preprocessed test features
     """
     x_train_processed = x_train.copy()
     x_test_processed = x_test.copy()
@@ -117,6 +124,57 @@ def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', appl
         
     return x_train_processed, x_test_processed
 
+
+def normalize(x_train, x_test, idx):
+    """
+    Normalize selected features in the training and test sets using z-score normalization.
+
+    This function normalizes only the features specified by idx, using the mean and std of the training set.
+    Constant features (std=0) are left unchanged.
+
+    Parameters
+    ----------
+    x_train : (np.array) (n_samples, n_features)
+        Training features
+    x_test : (np.array) (n_samples, n_features)
+        Test features
+    idx : (list or np.array)
+        Indices of features to normalize
+
+    Returns
+    -------
+    (tuple) (x_train_processed, x_test_processed) where:
+        - x_train_processed: (np.array) Normalized training features (selected columns only)
+        - x_test_processed: (np.array) Normalized test features (selected columns only)
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x_train = np.array([[1., 2.], [3., 4.], [5., 6.]])
+    >>> x_test = np.array([[7., 8.], [9., 10.]])
+    >>> idx = [0, 1]
+    >>> x_train_norm, x_test_norm = normalize(x_train, x_test, idx)
+    >>> np.round(x_train_norm, 2)
+    array([[-1.22, -1.22],
+           [ 0.  ,  0.  ],
+           [ 1.22,  1.22]])
+    >>> np.round(x_test_norm, 2)
+    array([[2.45, 2.45],
+           [3.67, 3.67]])
+    """
+    x_train_basis, x_test_basis = x_train[:, idx], x_test[:, idx]
+
+    feature_means = np.mean(x_train_basis, axis=0)
+    feature_stds = np.std(x_train_basis, axis=0)
+    
+    # Avoid division by 0 when the standar deviation is 0
+    feature_stds = np.where(feature_stds == 0, 1, feature_stds)
+    
+    x_train_processed = (x_train_basis - feature_means) / feature_stds
+    x_test_processed = (x_test_basis - feature_means) / feature_stds
+         
+    return x_train_processed, x_test_processed
+
 def one_hot_encode(column):
     """
     Convert a categorical column to one-hot encoded representation using k-1 encoding.
@@ -159,7 +217,55 @@ def one_hot_encode(column):
 
     return ohe_matrix
 
-def undersampling(train, test, seed = 42):
+def OHE_data(x_train, x_test, idx):
+    """
+    One-hot encode selected categorical features in train and test sets and concatenate them.
+
+    This function applies one-hot encoding (using k-1 encoding) to each feature specified by idx,
+    and concatenates the resulting binary columns for both train and test sets.
+
+    Parameters
+    ----------
+    x_train : (np.array) (n_samples_train, n_features)
+        Training data
+    x_test : (np.array) (n_samples_test, n_features)
+        Test data
+    idx : (list or np.array)
+        Indices of features to one-hot encode
+
+    Returns
+    -------
+    (tuple) (OHE_features_train, OHE_features_test) where:
+        - OHE_features_train: (np.array) One-hot encoded features for train set
+        - OHE_features_test: (np.array) One-hot encoded features for test set
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> x_train = np.array([[1, 2], [2, 1], [1, 1]])
+    >>> x_test = np.array([[2, 2], [1, 1]])
+    >>> idx = [0]
+    >>> OHE_train, OHE_test = OHE_data(x_train, x_test, idx)
+    >>> print(OHE_train)
+    [[1.]
+     [0.]
+     [1.]]
+    >>> print(OHE_test)
+    [[0.]
+     [1.]]
+    """
+    x_train_basis, x_test_basis = x_train[:, idx], x_test[:, idx]
+    d = x_train_basis.shape[1]
+    OHE_features_train = []
+    OHE_features_test = []
+
+    for feature in range(d):
+        OHE_features_train.append(one_hot_encode(x_train_basis[:, feature]))
+        OHE_features_test.append(one_hot_encode(x_test_basis[:, feature]))
+
+    return np.column_stack(OHE_features_train), np.column_stack(OHE_features_test)
+
+def undersampling(x, y, seed = 42):
     """
     Balance dataset by randomly removing samples from the majority class.
     
@@ -168,15 +274,15 @@ def undersampling(train, test, seed = 42):
 
     Parameters
     ----------
-    train : (np.array) (n_samples, n_features) Training feature matrix
-    test : (np.array) (n_samples,) Target labels corresponding to training data
+    x : (np.array) (n_samples, n_features) Input feature matrix
+    y : (np.array) (n_samples,) Target labels corresponding to training data
     seed : (int) Random seed for reproducible sampling
 
     Returns
     -------
     (tuple) (train_reduced, test_reduced) where:
-        - train_reduced: (np.array) Training data with majority class samples removed
-        - test_reduced: (np.array) Corresponding labels with majority class samples removed
+        - x_reduced: (np.array) Input data with majority class samples removed
+        - y_reduced: (np.array) Corresponding labels with majority class samples removed
     
     Examples
     --------
@@ -186,20 +292,14 @@ def undersampling(train, test, seed = 42):
     >>> X_bal, y_bal = undersampling(X, y, seed=42)
     >>> np.unique(y_bal, return_counts=True)
     (array([0, 1]), array([20, 20]))
-    
-    Notes
-    -----
-    - Randomly selects samples to drop from majority class
-    - Maintains all minority class samples
-    - May result in loss of potentially useful information from majority class
     """
-    values, counts = np.unique(test, return_counts=True)
+    values, counts = np.unique(y, return_counts=True)
 
     lower = counts[np.argmin(counts)]
     higher = counts[np.argmax(counts)]
     high_val = values[np.argmax(counts)]
 
-    high_idx = np.where(test == high_val)[0]
+    high_idx = np.where(y == high_val)[0]
 
     fold = np.floor(higher/lower)
     n_drop = np.floor((fold - 1)*higher/fold)
@@ -207,12 +307,12 @@ def undersampling(train, test, seed = 42):
     rng = np.random.default_rng(seed)
     drop_columns_idx = rng.choice(high_idx, size=int(n_drop), replace=False)
 
-    train_reduced = np.delete(train, drop_columns_idx, axis=0)
-    test_reduced = np.delete(test, drop_columns_idx, axis=0)
+    x_reduced = np.delete(x, drop_columns_idx, axis=0)
+    y_reduced = np.delete(y, drop_columns_idx, axis=0)
 
-    return train_reduced, test_reduced
+    return x_reduced, y_reduced
 
-def oversampling(train, test):
+def oversampling(x, y):
     """
     Balance dataset by duplicating samples from the minority class.
     
@@ -221,14 +321,14 @@ def oversampling(train, test):
 
     Parameters
     ----------
-    train : (np.array) (n_samples, n_features) Training feature matrix
-    test : (np.array) (n_samples,) Target labels corresponding to training data
+    x : (np.array) (n_samples, n_features) Input feature matrix
+    y : (np.array) (n_samples,) Target labels corresponding to training data
 
     Returns
     -------
     (tuple) (train_augmented, test_augmented) where:
-        - train_augmented: (np.array) Training data with minority class samples duplicated
-        - test_augmented: (np.array) Corresponding labels with minority class samples duplicated
+        - x_augmented: (np.array) Input data with minority class samples duplicated
+        - y_augmented: (np.array) Corresponding labels with minority class samples duplicated
     
     Examples
     --------
@@ -238,34 +338,107 @@ def oversampling(train, test):
     >>> X_bal, y_bal = oversampling(X, y)
     >>> np.unique(y_bal, return_counts=True)
     (array([0, 1]), array([20, 20]))
-    
-    Notes
-    -----
-    - Duplicates minority class samples to match majority class count
-    - Maintains all original samples from both classes
-    - May lead to overfitting due to exact duplicates
-    - Consider more sophisticated techniques like SMOTE for better results
     """
-    values, counts = np.unique(test, return_counts=True)
+    values, counts = np.unique(y, return_counts=True)
 
     lower = counts[np.argmin(counts)]
     low_val = values[np.argmin(counts)]
     higher = counts[np.argmax(counts)]
 
-    low_idx = np.where(test == low_val)[0]
+    low_idx = np.where(y == low_val)[0]
 
     fold = np.floor(higher/lower)
 
-    train_duplicated_points = np.repeat(train[low_idx], int(fold - 1), axis=0)
-    test_duplicated_points = np.repeat(test[low_idx], int(fold - 1), axis=0)
+    x_duplicated_points = np.repeat(x[low_idx], int(fold - 1), axis=0)
+    y_duplicated_points = np.repeat(y[low_idx], int(fold - 1), axis=0)
 
-    train_augmented = np.concatenate((train, train_duplicated_points), axis=0)
-    test_augmented = np.concatenate((test, test_duplicated_points), axis=0)
+    x_augmented = np.concatenate((x, x_duplicated_points), axis=0)
+    y_augmented = np.concatenate((y, y_duplicated_points), axis=0)
 
-    return train_augmented, test_augmented
+    return x_augmented, y_augmented
 
 
+def preprocessing_pipeline(x_train, x_test, OHE_idx, normalization_idx, apply_correlation = True, corr_threshold = 0.75):   
+    """
+    Apply a preprocessing pipeline with normalization, one-hot encoding, and optional correlation filtering.
 
+    This function performs the following steps:
+    - One-hot encodes the features specified by OHE_idx
+    - Normalizes the features specified by normalization_idx using z-score normalization
+    - Concatenates the normalized and one-hot encoded features
+    - Optionally removes highly correlated normalized features above the given threshold
+
+    Parameters
+    ----------
+    x_train : (np.array) (n_samples, n_features)
+        Training features
+    x_test : (np.array) (n_samples, n_features)
+        Test features
+    OHE_idx : (list or np.array)
+        Indices of features to one-hot encode
+    normalization_idx : (list or np.array)
+        Indices of features to normalize
+    apply_correlation : (bool), optional
+        Whether to remove highly correlated normalized features (default: True)
+    corr_threshold : (float), optional
+        Threshold above which features are considered highly correlated and removed (default: 0.75)
+
+    Returns
+    -------
+    (tuple) (x_train_processed, x_test_processed, normalized_cols_idx) where:
+        - x_train_processed: (np.array) Preprocessed training features
+        - x_test_processed: (np.array) Preprocessed test features
+        - normalized_cols_idx: (np.array) Indices of the normalized columns after correlation filtering
+    """
+    x_train_OHE, x_test_OHE = OHE_data(x_train, x_test, OHE_idx)
+    x_train_norm, x_test_norm = normalize(x_train, x_test, normalization_idx)
+
+    x_train_processed = np.concatenate([x_train_norm, x_train_OHE], axis = 1)
+    x_test_processed = np.concatenate([x_test_norm, x_test_OHE], axis = 1)
+
+    print(f"Number of normalized features: {len(normalization_idx)}, Number of OHE features: {len(OHE_idx)}", "\n")
+    print(f"The first {len(normalization_idx)} columns contain the normalized indices. The rest of the columns are OHE.", "\n")
+
+    normalized_cols_idx = np.arange(len(normalization_idx))
+    normalized_cols = x_train_processed[:, normalized_cols_idx]
+    
+    if apply_correlation: 
+        correlation_matrix = np.corrcoef(normalized_cols, rowvar=False)
+        
+        # Visualize correlation matrix
+        plt.figure(figsize=(12, 10))
+        sns.heatmap(correlation_matrix, cmap='coolwarm', annot=False)
+        
+        print(f"Number of features before removing highly correlated features: {x_train_processed.shape[1]}")
+
+        high_corr_pairs = [
+            (i, j)
+            for i in range(correlation_matrix.shape[0])
+            for j in range(i + 1, correlation_matrix.shape[1])
+            if abs(correlation_matrix[i, j]) > corr_threshold
+        ]
+        
+        features_to_drop = set()
+        for i, j in high_corr_pairs:
+            features_to_drop.add(j)  # Arbitrarily drop the second feature in the pair
+
+        x_train_processed = np.delete(x_train_processed, np.array(list(features_to_drop)), axis = 1)
+        x_test_processed = np.delete(x_test_processed, np.array(list(features_to_drop)), axis = 1)
+
+        normalized_cols_idx = np.arange(len(normalization_idx) - len(features_to_drop))
+
+        print(f"Number of features after removing highly correlated features: {x_train_processed.shape[1]}")
+        print("Highly correlated features:")
+        for i, j in high_corr_pairs:
+            print(f"Feature {i} and Feature {j}: {correlation_matrix[i, j]}")
+        plt.show()
+
+    print(f"Number of normalized features: {len(normalized_cols_idx)}, Number of OHE features: {len(OHE_idx)}", "\n")
+    print(f"The first {len(normalized_cols_idx)} columns contain the normalized indices. The rest of the columns are OHE.", "\n")
+
+    return x_train_processed, x_test_processed, normalized_cols_idx
 
 # if __name__ == "__main__":
-#     x_train, x_test = preprocess_data(x_train_og, x_test_og, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True)
+    # x_train, x_test = preprocess_data(x_train_og, x_test_og, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True)
+    # x_train, x_test, normalized_cols_idx = preprocessing_pipeline(x_train_og, x_test_og, OHE_idx = [0, 1, 2], normalization_idx = [3, 4])
+

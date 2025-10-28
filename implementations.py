@@ -1,5 +1,7 @@
 import numpy as np
-
+from helpers import build_poly
+from preprocessing import oversampling, undersampling
+from itertools import product
 
 def mean_squared_error_loss(y, tx, w):
     """
@@ -195,6 +197,26 @@ def logistic_loss_function(y, tx, w, lambda_=0):
     loss = ((-y.T @ z) + np.sum(np.log(1 + np.exp(z)))) / n + lambda_ * np.sum(w * w)
     return loss
 
+def logisitc_loss_function_l1(y, tx, w, lambda_=0):
+    """
+    Logistic regression loss function with L1 regularization.
+
+    Parameters
+    ----------
+    y : (np.array) Output data points
+    tx : (np.array) Input data points
+    w : (np.array) Weights
+    lambda_ : (float) Regularization parameter
+
+    Returns
+    -------
+    (float) Logistic regression loss with L1 penalty:
+    """
+    n = tx.shape[0]  # Number of samples
+    z = tx @ w
+    loss = ((-y.T @ z) + np.sum(np.log(1 + np.exp(z)))) / n + lambda_ * np.sum(np.abs(w))
+    return loss
+
 
 def compute_gradient_LR(y, tx, w, lambda_=0):
     """
@@ -209,10 +231,28 @@ def compute_gradient_LR(y, tx, w, lambda_=0):
 
     Returns
     -------
-    (np.array) Gradient vector of shape (d, 1), given by:
+    (np.array) Gradient vector of shape (d, 1)
     """
     n = tx.shape[0]  # Number of samples
     return (tx.T @ (sigmoid(tx @ w) - y)) / n + 2 * lambda_ * w
+
+def compute_gradient_LR_l1(y, tx, w, lambda_=0):
+    """"
+    Gradient of the logistic regression loss with L1 regularization.    
+
+    Parameters  
+    ----------
+    y : (np.array) Output data points
+    tx : (np.array) Input data points
+    w : (np.array) Weights
+    lambda_ : (float) Regularization parameter
+
+    Returns
+    -------
+    (np.array) Gradient vector of shape (d, 1)
+    """
+    n = tx.shape[0]  # Number of samples
+    return (tx.T @ (sigmoid(tx @ w) - y)) / n + lambda_ * np.sign(w)
 
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma, threshold=1e-8):
@@ -262,7 +302,6 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma, threshold=1e-8):
     final_loss = logistic_loss_function(y, tx, w)
     
     return w, final_loss
-
 
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, threshold=1e-8, verbose=True):
     """
@@ -314,6 +353,56 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, thresho
     
     return w, final_loss
 
+def reg_logistic_regression_l1(y, tx, lambda_, initial_w, max_iters, gamma, threshold=1e-8, verbose=True):
+    """
+    Regularized logistic regression using Gradient Descent (GD) with L1 regularization.
+    Includes early stopping based on convergence criteria.
+
+    Parameters
+    ----------
+    y : (np.array) Output data points (0 or 1)
+    tx : (np.array) Input data points
+    lambda_ : (float) Regularization parameter
+    initial_w : (np.array) Initial weights
+    max_iters : (int) Maximal number of iterations
+    gamma : (float) Learning rate
+    threshold : (float) Convergence threshold for early stopping
+
+    Returns
+    -------
+    (np.array, float) Final weights and their corresponding loss
+    """
+    w = initial_w.copy()
+    losses = []
+    
+    for i in range(max_iters):
+        # Compute current loss
+        current_loss = logisitc_loss_function_l1(y, tx, w, lambda_)
+        losses.append(current_loss)
+        
+        # Compute gradient and update weights
+        gradient = compute_gradient_LR_l1(y, tx, w, lambda_)
+        w = w - gamma * gradient
+        
+        # Check for convergence based on loss change (if we have previous loss)
+        if i > 0:
+            loss_change = abs(losses[-1] - losses[-2])
+            # Stop if loss change is below threshold
+            if loss_change < threshold:
+                if verbose:
+                    print(f"Converged at iteration {i+1}/{max_iters}")
+                    print(f"Loss change: {loss_change:.2e}")
+                break
+        
+        # Optional: Print progress every 100 iterations
+        if verbose and (i + 1) % 100 == 0:
+            print(f"Iteration {i+1}/{max_iters}, Loss: {current_loss:.6f}")
+    
+    # Final loss computation
+    final_loss = logisitc_loss_function_l1(y, tx, w, lambda_)
+    
+    return w, final_loss
+
 
 def build_k_indices(y, k_fold, seed):
     """
@@ -328,6 +417,12 @@ def build_k_indices(y, k_fold, seed):
     Returns
     -------
     k_indices : (np.array) k_fold x (N/k_fold) array of indices for each fold
+
+    Examples 
+    --------
+    >>> build_k_indices(np.array([1., 2., 3., 4.]), 2, 1)
+    array([[3, 2],
+           [0, 1]])
     """
     num_row = y.shape[0]
     interval = int(num_row / k_fold)
@@ -336,125 +431,220 @@ def build_k_indices(y, k_fold, seed):
     k_indices = [indices[k * interval: (k + 1) * interval] for k in range(k_fold)]
     return np.array(k_indices)
 
+def predict_labels(tx, w, cutoff):
+    """
+    Predict class labels (1 or -1) using model weights and a probability cutoff.
 
-def cross_validation_logistic(y, tx, k_indices, k, lambda_, gamma, max_iters=1000, initial_w=None):
+    Parameters
+    ----------
+    tx : np.array
+        Feature matrix of shape (n_samples, n_features).
+    w : np.array
+        Model weights of shape (n_features,) or (n_features, 1).
+    cutoff : float
+        Probability threshold for assigning class 1 (otherwise -1).
+
+    Returns
+    -------
+    np.array
+        Predicted labels (1 or -1) of shape (n_samples,).
+    """
+    probs = sigmoid(tx @ w)
+    return np.where(probs >= cutoff, 1, -1)
+
+def precision_recall_f1(y_true, y_pred):
+    """
+    Compute precision, recall, and F1-score for binary classification.
+
+    Parameters
+    ----------
+    y_true : np.array
+        True labels (1 or -1) of shape (n_samples,).
+    y_pred : np.array
+        Predicted labels (1 or -1) of shape (n_samples,).
+
+    Returns
+    -------
+    dict
+        Dictionary with keys 'precision', 'recall', and 'f1' (all floats).
+    """
+    tp = np.sum((y_true ==  1) & (y_pred ==  1))
+    fp = np.sum((y_true == -1) & (y_pred ==  1))
+    fn = np.sum((y_true ==  1) & (y_pred == -1))
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+    return {"precision": precision, "recall": recall, "f1": f1}
+
+def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling = None, cutoff = 0.5, max_iters=1000):
     """
     Cross validation for one fold of regularized logistic regression.
-    
+
+    Trains a regularized logistic regression model on the training fold, evaluates on the test fold,
+    and computes loss, precision, recall, and F1-score for both sets.
+
     Parameters
     ----------
     y : (np.array) Labels (0 or 1)
     tx : (np.array) Features with bias column
     k_indices : (np.array) k-fold indices
+    normalized_cols_idx : (np.array) Indices of normalized columns for polynomial expansion
+    sampling : (str or None) Sampling method: None, 'oversampling', or 'undersampling'
+    degree : (int) Degree for polynomial expansion
     k : (int) Current fold
     lambda_ : (float) Regularization parameter
     gamma : (float) Learning rate
+    cutoff : (float) Threshold for converting predicted probabilities to class labels (default: 0.5)
     max_iters : (int) Maximum iterations
-    initial_w : (np.array) Initial weights. If None, will use zeros
-    
+
     Returns
     -------
-    loss_tr : (float) Training loss
-    loss_te : (float) Test loss
+    (tuple):
+        - loss_tr : (float) Training loss
+        - loss_te : (float) Test loss
+        - metrics_tr : (dict) Precision, recall, and F1-score for training set
+        - metrics_te : (dict) Precision, recall, and F1-score for test set
     """
     # Get train and test indices for current fold
     te_indices = k_indices[k]
     tr_indices = np.hstack([k_indices[i] for i in range(len(k_indices)) if i != k])
-    
+
     # Split data
-    y_tr, tx_tr = y[tr_indices], tx[tr_indices]
-    y_te, tx_te = y[te_indices], tx[te_indices]
-    
+    y_tr, tx_tr = y[tr_indices], build_poly(tx[tr_indices], normalized_cols_idx, degree)
+    y_te, tx_te = y[te_indices], build_poly(tx[te_indices], normalized_cols_idx, degree)
+
+    if sampling == None:
+        pass
+    elif sampling == "oversampling":
+        tx_tr, y_tr = oversampling(tx_tr, y_tr)
+    elif sampling == "undersampling":
+        tx_tr, y_tr = undersampling(tx_tr, y_tr)
+    else:
+        raise ValueError("Incorrect sampling method")
+
     # Initialize weights
-    if initial_w is None:
-        initial_w = np.zeros(tx_tr.shape[1])
-    
+    initial_w = np.zeros(tx_tr.shape[1])
+
     # Train model (silent mode for CV with looser threshold for speed)
     w, _ = reg_logistic_regression(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma, threshold=1e-4, verbose=False)
     
-    # Compute losses
-    loss_tr = logistic_loss_function(y_tr, tx_tr, w, lambda_)
-    loss_te = logistic_loss_function(y_te, tx_te, w, lambda_)
-    
-    return loss_tr, loss_te
+    y_tr_pred = predict_labels(tx_tr, w, cutoff)
+    y_te_pred = predict_labels(tx_te, w, cutoff)
+
+    metrics_tr = precision_recall_f1(y_tr, y_tr_pred)
+    metrics_te = precision_recall_f1(y_te, y_te_pred)
+    metrics_tr["loss"] = logistic_loss_function(y_tr, tx_tr, w, lambda_)
+    metrics_te["loss"] = logistic_loss_function(y_te, tx_te, w, lambda_)    
+
+    return metrics_tr, metrics_te
 
 
-def logistic_cross_validation_demo(y, tx, k_fold, lambdas, gammas, max_iters=1000, seed=12, initial_w=None):
+def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, lambdas, gammas, samplings, cutoffs, max_iters=1000, seed=42, verbose=True):
     """
-    Cross validation for regularized logistic regression over lambda and gamma parameters.
-    
+    Perform grid search cross-validation for regularized logistic regression.
+
+    For each combination of degree, lambda, gamma, sampling method, and cutoff, performs k-fold cross-validation
+    and computes average training/validation loss and F1-score. Returns the best parameter sets by F1-score and loss.
+
     Parameters
     ----------
-    y : (np.array) Labels (0 or 1) 
-    tx : (np.array) Features with bias column
-    k_fold : (int) Number of folds
-    lambdas : (np.array) Array of regularization parameters to test
-    gammas : (np.array) Array of learning rates to test
-    max_iters : (int) Maximum iterations for training
-    seed : (int) Random seed
-    initial_w : (np.array) Initial weights to use. If None, will use zeros
-    
+    y : np.array
+        True labels (0 or 1) of shape (n_samples,).
+    tx : np.array
+        Feature matrix (with bias column) of shape (n_samples, n_features).
+    k_fold : int
+        Number of folds for cross-validation.
+    normalized_cols_idx : list or np.array
+        Indices of columns to normalize.
+    degrees : iterable
+        Degrees of polynomial feature expansion to test.
+    lambdas : iterable
+        Regularization parameters to test.
+    gammas : iterable
+        Learning rates to test.
+    samplings : iterable
+        Sampling strategies to test (e.g., None, 'undersample', 'oversample').
+    cutoffs : iterable
+        Cutoff thresholds for classification to test.
+    max_iters : int, optional
+        Maximum number of iterations for training (default: 1000).
+    seed : int, optional
+        Random seed for reproducibility (default: 42).
+
     Returns
     -------
-    best_lambda : (float) Best regularization parameter
-    best_gamma : (float) Best learning rate  
-    best_loss : (float) Best validation loss
-    results : (dict) Dictionary containing all results
+    best_f1_result : dict
+        Parameter set and metrics with the highest average validation F1-score.
+    best_loss_result : dict
+        Parameter set and metrics with the lowest average validation loss.
+    results : list of dict
+        List of dictionaries with all parameter combinations and their average metrics.
     """
     
     # Build k-fold indices
     k_indices = build_k_indices(y, k_fold, seed)
+
+    results = []
+
+    for lambda_, gamma, degree, sampling, cutoff in product(lambdas, gammas, degrees, samplings, cutoffs):
+
+        if verbose:
+            print("-----------------------------------------")
+            print("Hyperparameter combination:\n")
+            print(f"Testing lambda={lambda_:.2e}\n gamma={gamma:.2e}\n degree={degree}\n sampling={sampling}\n cutoff={cutoff}\n")
+
+        params = {
+            "lambda": lambda_,
+            "gamma": gamma,
+            "degree": degree,
+            "sampling": sampling,
+            "cutoff": cutoff
+        }
     
-    # Initialize results storage
-    results = {
-        'lambdas': lambdas,
-        'gammas': gammas,
-        'train_losses': np.zeros((len(lambdas), len(gammas))),
-        'test_losses': np.zeros((len(lambdas), len(gammas)))
-    }
+        total_loss_tr = 0
+        total_loss_te = 0
+        total_f1_tr = 0
+        total_f1_te = 0
+
+        for k in range(k_fold):
+            metrics_tr, metrics_te = cross_validation_logistic(
+                y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling, cutoff, max_iters
+            )
+            total_loss_tr += metrics_tr["loss"]
+            total_loss_te += metrics_te["loss"]
+            total_f1_tr += metrics_tr["f1"]
+            total_f1_te += metrics_te["f1"]
+
+        results.append({
+            **params,
+            "avg_loss_tr": total_loss_tr / k_fold,
+            "avg_loss_te": total_loss_te / k_fold,
+            "avg_f1_tr": total_f1_tr / k_fold,
+            "avg_f1_te": total_f1_te / k_fold
+        })
+
+        if verbose:
+            print(f"Avg Train Loss: {total_loss_tr / k_fold:.4f}\n Avg Test Loss: {total_loss_te / k_fold:.4f}\n Avg Train F1: {total_f1_tr / k_fold:.4f}\n Avg Test F1: {total_f1_te / k_fold:.4f}\n")
+            print("-----------------------------------------------------")
+
+    avg_f1_te_array = np.array([res["avg_f1_te"] for res in results])
+    avg_loss_te_array = np.array([res["avg_loss_te"] for res in results])
+
+    # Best F1 (maximize)
+    best_f1_idx = np.argmax(avg_f1_te_array)
+    best_f1_result = results[best_f1_idx]
+
+    # Best loss (minimize)
+    best_loss_idx = np.argmin(avg_loss_te_array)
+    best_loss_result = results[best_loss_idx]
+
+    print("Best by F1 (avg_f1_te):")
+    print(best_f1_result)
+
+    print("\nBest by Loss (avg_loss_te):")
+    print(best_loss_result)
+
+    return best_f1_result, best_loss_result, results
     
-    best_loss = float('inf')
-    best_lambda = None
-    best_gamma = None
     
-    print(f"Starting cross-validation with {len(lambdas)} lambdas and {len(gammas)} gammas...")
-    
-    # Grid search over lambda and gamma
-    for i, lambda_ in enumerate(lambdas):
-        for j, gamma in enumerate(gammas):
-            print(f"Testing lambda={lambda_:.1e}, gamma={gamma:.1e}")
-            
-            # Accumulate losses across folds
-            loss_tr_total = 0
-            loss_te_total = 0
-            
-            for fold in range(k_fold):
-                loss_tr, loss_te = cross_validation_logistic(
-                    y, tx, k_indices, fold, lambda_, gamma, max_iters, initial_w=initial_w
-                )
-                loss_tr_total += loss_tr
-                loss_te_total += loss_te
-            
-            # Average losses across folds
-            avg_loss_tr = loss_tr_total / k_fold
-            avg_loss_te = loss_te_total / k_fold
-            
-            # Store results
-            results['train_losses'][i, j] = avg_loss_tr
-            results['test_losses'][i, j] = avg_loss_te
-            
-            # Update best parameters
-            if avg_loss_te < best_loss:
-                best_loss = avg_loss_te
-                best_lambda = lambda_
-                best_gamma = gamma
-                
-            print(f"  Avg train loss: {avg_loss_tr:.4f}, Avg test loss: {avg_loss_te:.4f}")
-    
-    print(f"\nBest parameters:")
-    print(f"Lambda: {best_lambda:.1e}")
-    print(f"Gamma: {best_gamma:.1e}")  
-    print(f"Best validation loss: {best_loss:.4f}")
-    
-    return best_lambda, best_gamma, best_loss, results
 

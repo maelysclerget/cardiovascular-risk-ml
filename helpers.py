@@ -3,6 +3,46 @@
 import csv
 import numpy as np
 import os
+from itertools import combinations_with_replacement
+
+
+def build_poly(x, idx, degree):
+    """
+    Polynomial feature expansion for selected features, concatenated to the original data.
+
+    Parameters
+    ----------
+    x : (np.array) (n_samples, num_features) Input data.
+    idx : (list or np.array) Indices of features to use for expansion.
+    degree : (int) Maximum degree of polynomial features.
+
+    Returns
+    -------
+    (np.array) (n_samples, num_features + num_poly_features) 
+    Original data with polynomial and cross terms of selected features up to the given degree appended as new columns.
+
+    Examples
+    --------
+    >>> x = np.array([[1, 2, 7], [3, 4, 9]])
+    >>> idx = np.array([0, 1])
+    >>> degree = 2
+    >>> build_poly(x, idx, degree)
+    array([[ 1,  2,  1,  2,  4,  7],
+           [ 3,  4,  9, 12, 16,  9]])
+    """
+    x_basis = x[:, idx]
+    d = x_basis.shape[1]
+    features = []
+
+    for deg in range(1, degree + 1):
+        for combination in combinations_with_replacement(range(d), deg):
+            feature = np.prod(x_basis[:, combination], axis=1)
+            features.append(feature)
+            
+    poly_expansion = np.column_stack(features)
+    x_rest = np.delete(x, idx, axis = 1)
+    return np.concatenate([poly_expansion, x_rest], axis=1)
+
 
 
 def load_csv_data(data_path, sub_sample=False):
@@ -70,3 +110,5 @@ def create_csv_submission(ids, y_pred, name):
         writer.writeheader()
         for r1, r2 in zip(ids, y_pred):
             writer.writerow({"Id": int(r1), "Prediction": int(r2)})
+
+
