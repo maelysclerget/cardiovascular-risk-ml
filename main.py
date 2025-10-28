@@ -1,8 +1,8 @@
 import numpy as np
 import os
-from src.helpers import load_csv_data, create_csv_submission
+from helpers import load_csv_data, create_csv_submission
 from implementations import logistic_regression, sigmoid, logistic_cross_validation_demo, reg_logistic_regression
-from src.preprocessing import preprocess_data
+from preprocessing import preprocess_data
 
 
 def main():
