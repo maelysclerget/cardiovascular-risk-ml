@@ -452,7 +452,7 @@ def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, 
     return metrics_tr, metrics_te
 
 
-def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, lambdas, gammas, samplings, cutoffs, max_iters=1000, seed=42):
+def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, lambdas, gammas, samplings, cutoffs, max_iters=1000, seed=42, verbose=True):
     """
     Perform grid search cross-validation for regularized logistic regression.
 
@@ -501,7 +501,10 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
 
     for lambda_, gamma, degree, sampling, cutoff in product(lambdas, gammas, degrees, samplings, cutoffs):
 
-        print(f"Testing lambda={lambda_:.1e}, gamma={gamma:.1e}, degree={degree}, sampling={sampling}, cutoff={cutoff}")
+        if verbose:
+            print("-----------------------------------------")
+            print("Hyperparameter combination:\n")
+            print(f"Testing lambda={lambda_:.2e}\n gamma={gamma:.2e}\n degree={degree}\n sampling={sampling}\n cutoff={cutoff}\n")
 
         params = {
             "lambda": lambda_,
@@ -532,6 +535,10 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
             "avg_f1_tr": total_f1_tr / k_fold,
             "avg_f1_te": total_f1_te / k_fold
         })
+
+        if verbose:
+            print(f"Avg Train Loss: {total_loss_tr / k_fold:.4f}\n Avg Test Loss: {total_loss_te / k_fold:.4f}\n Avg Train F1: {total_f1_tr / k_fold:.4f}\n Avg Test F1: {total_f1_te / k_fold:.4f}\n")
+            print("-----------------------------------------------------")
 
     avg_f1_te_array = np.array([res["avg_f1_te"] for res in results])
     avg_loss_te_array = np.array([res["avg_loss_te"] for res in results])
