@@ -9,6 +9,7 @@ __pycache__/
 
 # Dataset
 data/
+dataset/
 
 # UV Environment 
 .venv/

@@ -254,8 +254,40 @@ def compute_gradient_LR_l1(y, tx, w, lambda_=0):
     n = tx.shape[0]  # Number of samples
     return (tx.T @ (sigmoid(tx @ w) - y)) / n + lambda_ * np.sign(w)
 
+def logistic_regression(y, tx, initial_w, max_iters, gamma):
+    """
+    Logistic regression using Gradient Descent (GD).
 
-def logistic_regression(y, tx, initial_w, max_iters, gamma, threshold=1e-8):
+    Parameters
+    ----------
+    y : (np.array) Output data points (0 or 1)
+    tx : (np.array) Input data points
+    initial_w : (np.array) Initial weights
+    max_iters : (int) Maximal number of iterations
+    gamma : (float) Learning rate
+
+    Returns
+    -------
+    (np.array, float) Final weights and their corresponding loss
+    """
+    w = initial_w.copy()
+    losses = []
+    
+    for i in range(max_iters):
+        # Compute current loss
+        current_loss = logistic_loss_function(y, tx, w)
+        losses.append(current_loss)
+        
+        # Compute gradient and update weights
+        gradient = compute_gradient_LR(y, tx, w)
+        w = w - gamma * gradient
+    
+    # Final loss computation
+    final_loss = logistic_loss_function(y, tx, w)
+    
+    return w, final_loss
+
+def logistic_regression_with_early_stopping(y, tx, initial_w, max_iters, gamma, threshold=1e-8, verbose = True):
     """
     Logistic regression using Gradient Descent (GD).
     Includes early stopping based on convergence criteria.
@@ -268,6 +300,7 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma, threshold=1e-8):
     max_iters : (int) Maximal number of iterations
     gamma : (float) Learning rate
     threshold : (float) Convergence threshold for early stopping
+    verbose : (bool) Whether to print progress messages
 
     Returns
     -------
@@ -295,7 +328,7 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma, threshold=1e-8):
                 break
         
         # Optional: Print progress every 100 iterations
-        if (i + 1) % 100 == 0:
+        if verbose and (i + 1) % 100 == 0:
             print(f"Iteration {i+1}/{max_iters}, Loss: {current_loss:.6f}")
     
     # Final loss computation
@@ -303,7 +336,41 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma, threshold=1e-8):
     
     return w, final_loss
 
-def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, threshold=1e-8, verbose=True):
+def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
+    """
+    Regularized logistic regression using Gradient Descent (GD) with L2 regularization.
+
+    Parameters
+    ----------
+    y : (np.array) Output data points (0 or 1)
+    tx : (np.array) Input data points
+    lambda_ : (float) Regularization parameter
+    initial_w : (np.array) Initial weights
+    max_iters : (int) Maximal number of iterations
+    gamma : (float) Learning rate
+
+    Returns
+    -------
+    (np.array, float) Final weights and their corresponding loss
+    """
+    w = initial_w.copy()
+    losses = []
+    
+    for i in range(max_iters):
+        # Compute current loss
+        current_loss = logistic_loss_function(y, tx, w, lambda_)
+        losses.append(current_loss)
+        
+        # Compute gradient and update weights
+        gradient = compute_gradient_LR(y, tx, w, lambda_)
+        w = w - gamma * gradient
+    
+    # Final loss computation
+    final_loss = logistic_loss_function(y, tx, w, lambda_)
+    
+    return w, final_loss
+
+def reg_logistic_regression_with_early_stopping(y, tx, lambda_, initial_w, max_iters, gamma, threshold=1e-8, verbose=True):
     """
     Regularized logistic regression using Gradient Descent (GD) with L2 regularization.
     Includes early stopping based on convergence criteria.
@@ -317,6 +384,7 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma, thresho
     max_iters : (int) Maximal number of iterations
     gamma : (float) Learning rate
     threshold : (float) Convergence threshold for early stopping
+    verbose : (bool) Whether to print progress messages
 
     Returns
     -------
@@ -367,6 +435,7 @@ def reg_logistic_regression_l1(y, tx, lambda_, initial_w, max_iters, gamma, thre
     max_iters : (int) Maximal number of iterations
     gamma : (float) Learning rate
     threshold : (float) Convergence threshold for early stopping
+    verbose : (bool) Whether to print progress messages
 
     Returns
     -------
@@ -476,7 +545,7 @@ def precision_recall_f1(y_true, y_pred):
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
     return {"precision": precision, "recall": recall, "f1": f1}
 
-def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling = None, cutoff = 0.5, max_iters=1000):
+def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling = None, algorithm = "l2", cutoff = 0.5, max_iters=1000):
     """
     Cross validation for one fold of regularized logistic regression.
 
@@ -489,11 +558,12 @@ def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, 
     tx : (np.array) Features with bias column
     k_indices : (np.array) k-fold indices
     normalized_cols_idx : (np.array) Indices of normalized columns for polynomial expansion
-    sampling : (str or None) Sampling method: None, 'oversampling', or 'undersampling'
     degree : (int) Degree for polynomial expansion
     k : (int) Current fold
     lambda_ : (float) Regularization parameter
     gamma : (float) Learning rate
+    sampling : (str or None) Sampling method: None, 'oversampling', or 'undersampling'
+    algorithm : (str) Algorithm choice: 'l2' for L2 regularization, 'l1' for L1 regularization
     cutoff : (float) Threshold for converting predicted probabilities to class labels (default: 0.5)
     max_iters : (int) Maximum iterations
 
@@ -526,7 +596,12 @@ def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, 
     initial_w = np.zeros(tx_tr.shape[1])
 
     # Train model (silent mode for CV with looser threshold for speed)
-    w, _ = reg_logistic_regression(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma, threshold=1e-4, verbose=False)
+    if algorithm == "l2":
+        w, _ = reg_logistic_regression_with_early_stopping(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma, threshold=1e-6, verbose=False)
+    elif algorithm == "l1":
+        w, _ = reg_logistic_regression_l1(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma, threshold=1e-6, verbose=False)
+    else:
+        raise ValueError("Incorrect algorithm choice")
     
     y_tr_pred = predict_labels(tx_tr, w, cutoff)
     y_te_pred = predict_labels(tx_te, w, cutoff)
@@ -539,7 +614,7 @@ def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, 
     return metrics_tr, metrics_te
 
 
-def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, lambdas, gammas, samplings, cutoffs, max_iters=1000, seed=42, verbose=True):
+def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, lambdas, gammas, samplings, algorithms, cutoffs, max_iters=1000, seed=42, verbose=True):
     """
     Perform grid search cross-validation for regularized logistic regression.
 
@@ -564,12 +639,16 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
         Learning rates to test.
     samplings : iterable
         Sampling strategies to test (e.g., None, 'undersample', 'oversample').
+    algorithms : iterable
+        Algorithms to test (e.g., 'l2', 'l1').
     cutoffs : iterable
         Cutoff thresholds for classification to test.
     max_iters : int, optional
         Maximum number of iterations for training (default: 1000).
     seed : int, optional
         Random seed for reproducibility (default: 42).
+    verbose : bool, optional
+        Whether to print progress messages (default: True).
 
     Returns
     -------
@@ -586,12 +665,12 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
 
     results = []
 
-    for lambda_, gamma, degree, sampling, cutoff in product(lambdas, gammas, degrees, samplings, cutoffs):
+    for lambda_, gamma, degree, sampling, algorithm, cutoff in product(lambdas, gammas, degrees, samplings, algorithms, cutoffs):
 
         if verbose:
             print("-----------------------------------------")
             print("Hyperparameter combination:\n")
-            print(f"Testing lambda={lambda_:.2e}\n gamma={gamma:.2e}\n degree={degree}\n sampling={sampling}\n cutoff={cutoff}\n")
+            print(f"Testing lambda={lambda_:.2e}\n gamma={gamma:.2e}\n degree={degree}\n sampling={sampling}\n cutoff={cutoff}\n algorithm={algorithm}\n")
 
         params = {
             "lambda": lambda_,
@@ -608,7 +687,7 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
 
         for k in range(k_fold):
             metrics_tr, metrics_te = cross_validation_logistic(
-                y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling, cutoff, max_iters
+                y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling, algorithm, cutoff, max_iters
             )
             total_loss_tr += metrics_tr["loss"]
             total_loss_te += metrics_te["loss"]
