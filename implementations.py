@@ -337,7 +337,7 @@ def build_k_indices(y, k_fold, seed):
     return np.array(k_indices)
 
 
-def cross_validation_logistic(y, tx, k_indices, k, lambda_, gamma, max_iters=1000):
+def cross_validation_logistic(y, tx, k_indices, k, lambda_, gamma, max_iters=1000, initial_w=None):
     """
     Cross validation for one fold of regularized logistic regression.
     
@@ -350,6 +350,7 @@ def cross_validation_logistic(y, tx, k_indices, k, lambda_, gamma, max_iters=100
     lambda_ : (float) Regularization parameter
     gamma : (float) Learning rate
     max_iters : (int) Maximum iterations
+    initial_w : (np.array) Initial weights. If None, will use zeros
     
     Returns
     -------
@@ -365,7 +366,8 @@ def cross_validation_logistic(y, tx, k_indices, k, lambda_, gamma, max_iters=100
     y_te, tx_te = y[te_indices], tx[te_indices]
     
     # Initialize weights
-    initial_w = np.zeros(tx_tr.shape[1])
+    if initial_w is None:
+        initial_w = np.zeros(tx_tr.shape[1])
     
     # Train model (silent mode for CV with looser threshold for speed)
     w, _ = reg_logistic_regression(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma, threshold=1e-4, verbose=False)
@@ -377,7 +379,7 @@ def cross_validation_logistic(y, tx, k_indices, k, lambda_, gamma, max_iters=100
     return loss_tr, loss_te
 
 
-def logistic_cross_validation_demo(y, tx, k_fold, lambdas, gammas, max_iters=1000, seed=12):
+def logistic_cross_validation_demo(y, tx, k_fold, lambdas, gammas, max_iters=1000, seed=12, initial_w=None):
     """
     Cross validation for regularized logistic regression over lambda and gamma parameters.
     
@@ -390,6 +392,7 @@ def logistic_cross_validation_demo(y, tx, k_fold, lambdas, gammas, max_iters=100
     gammas : (np.array) Array of learning rates to test
     max_iters : (int) Maximum iterations for training
     seed : (int) Random seed
+    initial_w : (np.array) Initial weights to use. If None, will use zeros
     
     Returns
     -------
@@ -427,7 +430,7 @@ def logistic_cross_validation_demo(y, tx, k_fold, lambdas, gammas, max_iters=100
             
             for fold in range(k_fold):
                 loss_tr, loss_te = cross_validation_logistic(
-                    y, tx, k_indices, fold, lambda_, gamma, max_iters
+                    y, tx, k_indices, fold, lambda_, gamma, max_iters, initial_w=initial_w
                 )
                 loss_tr_total += loss_tr
                 loss_te_total += loss_te
