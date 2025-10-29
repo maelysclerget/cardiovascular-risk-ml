@@ -75,11 +75,11 @@ def main():
     tx_test = np.c_[np.ones((x_test.shape[0], 1)), x_test]
     
     # Hyperparameter tuning (example values, adjust as needed)
-    lambda_list    = np.linspace(0.001, 1, 3)  # Regularization strength (3 values)
-    gamma_list     = np.linspace(0.01, 1, 3)   # Learning rate (4 values)
+    lambda_list    = np.linspace(0.00005, 0.01, 3)  # Regularization strength (3 values)
+    gamma_list     = np.linspace(0.05, 0.15, 3)   # Learning rate (4 values)
     degree_list    = [1, 2]                                   # Polynomial degree
-    sampling_list  = [None, 'oversampling', 'undersampling']      # Sampling strategy
-    factor_list    = [0.5, 0.75, 1]                                # Sampling factor
+    sampling_list  = ['undersampling']      # Sampling strategy
+    factor_list    = [1, 1.15, 1.3]                                # Sampling factor
     algorithm_list = ['l2', 'l1']                           # Regularization type
     cutoff_list    = [0.4, 0.5, 0.6]                   # Classification threshold
 

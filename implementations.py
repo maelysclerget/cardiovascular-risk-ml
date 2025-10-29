@@ -539,7 +539,7 @@ def predict_labels(tx, w, cutoff):
         Predicted labels (1 or -1) of shape (n_samples,).
     """
     probs = sigmoid(tx @ w)
-    return np.where(probs >= cutoff, 1, -1)
+    return np.where(probs >= cutoff, 1, 0)
 
 def precision_recall_f1(y_true, y_pred):
     """
@@ -557,9 +557,9 @@ def precision_recall_f1(y_true, y_pred):
     dict
         Dictionary with keys 'precision', 'recall', and 'f1' (all floats).
     """
-    tp = np.sum((y_true ==  1) & (y_pred ==  1))
-    fp = np.sum((y_true == -1) & (y_pred ==  1))
-    fn = np.sum((y_true ==  1) & (y_pred == -1))
+    tp = np.sum((y_true == 1) & (y_pred == 1))
+    fp = np.sum((y_true == 0) & (y_pred == 1))
+    fn = np.sum((y_true == 1) & (y_pred == 0))
     precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
@@ -693,7 +693,7 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
         if verbose:
             print("-----------------------------------------")
             print("Hyperparameter combination:\n")
-            print(f"Testing lambda={lambda_:.2e}\n gamma={gamma:.2e}\n degree={degree}\n sampling={sampling}\n cutoff={cutoff}\n algorithm={algorithm}\n")
+            print(f"Testing lambda={lambda_:.2e}\n gamma={gamma:.2e}\n degree={degree}\n sampling={sampling}\n cutoff={cutoff}\n algorithm={algorithm}\n factor={factor}\n")
 
         params = {
             "lambda": lambda_,
@@ -712,7 +712,7 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
 
         for k in range(k_fold):
 
-            if sampling == None and factor != 1:
+            if sampling == None and factor != 1 or sampling == "undersampling" and factor < 1:
                 break
 
             metrics_tr, metrics_te = cross_validation_logistic(
