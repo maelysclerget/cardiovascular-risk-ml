@@ -69,79 +69,79 @@ def main():
     print(f"Final feature count: {final_features}")
     print(f"New columns created by OHE: {new_columns}")
 
-    # # Convert labels from {-1, 1} to {0, 1} for logistic regression
-    # y_train = (y_train_raw + 1) / 2  # Converts -1 to 0, +1 to 1
+    # Convert labels from {-1, 1} to {0, 1} for logistic regression
+    y_train = (y_train_raw + 1) / 2  # Converts -1 to 0, +1 to 1
     
-    # # Add bias column (intercept) to the feature matrices
-    # tx_train = np.c_[np.ones((x_train.shape[0], 1)), x_train]
-    # tx_test = np.c_[np.ones((x_test.shape[0], 1)), x_test]
+    # Add bias column (intercept) to the feature matrices
+    tx_train = np.c_[np.ones((x_train.shape[0], 1)), x_train]
+    tx_test = np.c_[np.ones((x_test.shape[0], 1)), x_test]
 
-    # # Use best hyperparameters from previous run
-    # lambda_ = 0.001
-    # gamma = 0.1
-    # max_iters = 500
-    # initial_w = np.zeros(tx_train.shape[1])
+    # Use best hyperparameters from previous run
+    lambda_ = 0.001
+    gamma = 0.1
+    max_iters = 500
+    initial_w = np.zeros(tx_train.shape[1])
 
-    # print("\nTraining logistic regression with best hyperparameters:")
-    # print(f"Lambda: {lambda_}")
-    # print(f"Gamma: {gamma}")
-    # print(f"Max iterations: {max_iters}")
+    print("\nTraining logistic regression with best hyperparameters:")
+    print(f"Lambda: {lambda_}")
+    print(f"Gamma: {gamma}")
+    print(f"Max iterations: {max_iters}")
 
-    # # Train the model using logistic regression
-    # from implementations import reg_logistic_regression, sigmoid, precision_recall_f1
-    # w_optimal, loss = reg_logistic_regression(
-    #     y_train, tx_train, 
-    #     lambda_, 
-    #     initial_w, 
-    #     max_iters, 
-    #     gamma, 
-    #     verbose=False
-    # )
+    # Train the model using logistic regression
+    from implementations import reg_logistic_regression, sigmoid, precision_recall_f1
+    w_optimal, loss = reg_logistic_regression(
+        y_train, tx_train, 
+        lambda_, 
+        initial_w, 
+        max_iters, 
+        gamma, 
+        verbose=False
+    )
 
-    # # Get probabilities for training set to optimize threshold for F1
-    # print("\nOptimizing threshold for F1 score...")
-    # z_train = tx_train @ w_optimal
-    # y_train_prob = sigmoid(z_train)
+    # Get probabilities for training set to optimize threshold for F1
+    print("\nOptimizing threshold for F1 score...")
+    z_train = tx_train @ w_optimal
+    y_train_prob = sigmoid(z_train)
     
-    # # Test different thresholds to maximize F1 on training set
-    # thresholds = np.arange(0.25, 0.76, 0.01)  # Fine-grained threshold search
-    # best_f1 = 0
-    # best_threshold = 0.5
+    # Test different thresholds to maximize F1 on training set
+    thresholds = np.arange(0.25, 0.76, 0.01)  # Fine-grained threshold search
+    best_f1 = 0
+    best_threshold = 0.5
     
-    # for threshold in thresholds:
-    #     y_pred_train_binary = (y_train_prob >= threshold).astype(int)
-    #     # Use the precision_recall_f1 function
-    #     precision, recall, f1 = precision_recall_f1(y_train, y_pred_train_binary)
-            
-    #     if f1 > best_f1:
-    #         best_f1 = f1
-    #         best_threshold = threshold
+    for threshold in thresholds:
+        y_pred_train_binary = (y_train_prob >= threshold).astype(int)
+        # Use the precision_recall_f1 function
+        metrics = precision_recall_f1(y_train, y_pred_train_binary)
+
+        if metrics['f1'] > best_f1:
+            best_f1 = metrics['f1']
+            best_threshold = threshold
     
-    # print(f"Best threshold for F1: {best_threshold:.3f} (F1 = {best_f1:.4f})")
+    print(f"Best threshold for F1: {best_threshold:.3f} (F1 = {best_f1:.4f})")
     
-    # # Apply best threshold to test set
-    # z_test = tx_test @ w_optimal
-    # y_pred_prob = sigmoid(z_test)
-    # y_pred_binary = (y_pred_prob >= best_threshold).astype(int)  # 0 or 1
-    # y_pred = 2 * y_pred_binary - 1  # Convert 0,1 back to -1,+1
+    # Apply best threshold to test set
+    z_test = tx_test @ w_optimal
+    y_pred_prob = sigmoid(z_test)
+    y_pred_binary = (y_pred_prob >= best_threshold).astype(int)  # 0 or 1
+    y_pred = 2 * y_pred_binary - 1  # Convert 0,1 back to -1,+1
     
-    # print(f"\nPrediction statistics:")
-    # print(f"Number of positive predictions (1): {np.sum(y_pred == 1)}")
-    # print(f"Number of negative predictions (-1): {np.sum(y_pred == -1)}")
-    # print(f"Percentage positive: {100 * np.sum(y_pred == 1) / len(y_pred):.2f}%")
-    # print(f"Average predicted probability: {np.mean(y_pred_prob):.4f}")
-    # print(f"Probability range: [{np.min(y_pred_prob):.4f}, {np.max(y_pred_prob):.4f}]")
+    print(f"\nPrediction statistics:")
+    print(f"Number of positive predictions (1): {np.sum(y_pred == 1)}")
+    print(f"Number of negative predictions (-1): {np.sum(y_pred == -1)}")
+    print(f"Percentage positive: {100 * np.sum(y_pred == 1) / len(y_pred):.2f}%")
+    print(f"Average predicted probability: {np.mean(y_pred_prob):.4f}")
+    print(f"Probability range: [{np.min(y_pred_prob):.4f}, {np.max(y_pred_prob):.4f}]")
     
-    # # Create submissions directory if it doesn't exist
-    # submissions_dir = 'submissions'
-    # os.makedirs(submissions_dir, exist_ok=True)
+    # Create submissions directory if it doesn't exist
+    submissions_dir = 'submissions'
+    os.makedirs(submissions_dir, exist_ok=True)
     
-    # # Create submission file
-    # from helpers import create_csv_submission
-    # submission_name = f"submission_reg_logistic_lambda{lambda_}_gamma{gamma}_th{best_threshold:.3f}.csv"
-    # submission_path = os.path.join(submissions_dir, submission_name)
-    # create_csv_submission(test_ids, y_pred, submission_path)
-    # print(f"\nSubmission saved as: {submission_path}")
+    # Create submission file
+    from helpers import create_csv_submission
+    submission_name = f"submission_reg_logistic_lambda{lambda_}_gamma{gamma}_th{best_threshold:.3f}.csv"
+    submission_path = os.path.join(submissions_dir, submission_name)
+    create_csv_submission(test_ids, y_pred, submission_path)
+    print(f"\nSubmission saved as: {submission_path}")
 
 if __name__ == "__main__":
     main()
