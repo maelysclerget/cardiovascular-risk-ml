@@ -175,7 +175,7 @@ def normalize(x_train, x_test, idx):
          
     return x_train_processed, x_test_processed
 
-def one_hot_encode(column):
+def one_hot_encode(column, categories=None):
     """
     Convert a categorical column to one-hot encoded representation using k-1 encoding.
     
@@ -185,7 +185,10 @@ def one_hot_encode(column):
 
     Parameters
     ----------
-    column : (np.array) (n_samples, 1) 1D array containing categorical values to be encoded 
+    column : (np.array) (n_samples, 1) 1D array containing categorical values to be encoded
+    categories : (np.array), optional
+        Pre-defined categories to use for encoding. If None, will be derived from column.
+        When provided, ensures consistent encoding across different data splits.
 
     Returns
     -------
@@ -194,25 +197,19 @@ def one_hot_encode(column):
         - Each column corresponds to a unique category (except the last one)
         - Values are 1 if the sample belongs to that category, 0 otherwise
         - The last category is implicitly represented when all columns are 0
-    
-    Examples
-    --------
-    >>> categories = np.array(['A', 'B', 'C', 'A', 'B'])
-    >>> encoded = one_hot_encode(categories)
-    >>> print(encoded)
-    [[1. 0.]
-     [0. 1.]
-     [0. 0.]
-     [1. 0.]
-     [0. 1.]]
     """
     n = column.shape[0]
-    unique_elements = np.unique(column)
+    if categories is None:
+        categories = np.unique(column)
+    
+    # Ensure all values in column are present in categories
+    if not np.all(np.isin(column, categories)):
+        raise ValueError("Column contains values not present in provided categories")
 
-    ohe_matrix = np.zeros(shape = (n, len(unique_elements) - 1))
+    ohe_matrix = np.zeros(shape=(n, len(categories) - 1))
     for i in range(n):
-        idx = np.where(unique_elements == column[i])[0][0]
-        if (idx != len(unique_elements) - 1):
+        idx = np.where(categories == column[i])[0][0]
+        if (idx != len(categories) - 1):
             ohe_matrix[i, idx] = 1
 
     return ohe_matrix
@@ -222,7 +219,8 @@ def OHE_data(x_train, x_test, idx):
     One-hot encode selected categorical features in train and test sets and concatenate them.
 
     This function applies one-hot encoding (using k-1 encoding) to each feature specified by idx,
-    and concatenates the resulting binary columns for both train and test sets.
+    and concatenates the resulting binary columns for both train and test sets. It ensures
+    consistent encoding between train and test by using combined unique categories.
 
     Parameters
     ----------
@@ -238,21 +236,6 @@ def OHE_data(x_train, x_test, idx):
     (tuple) (OHE_features_train, OHE_features_test) where:
         - OHE_features_train: (np.array) One-hot encoded features for train set
         - OHE_features_test: (np.array) One-hot encoded features for test set
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> x_train = np.array([[1, 2], [2, 1], [1, 1]])
-    >>> x_test = np.array([[2, 2], [1, 1]])
-    >>> idx = [0]
-    >>> OHE_train, OHE_test = OHE_data(x_train, x_test, idx)
-    >>> print(OHE_train)
-    [[1.]
-     [0.]
-     [1.]]
-    >>> print(OHE_test)
-    [[0.]
-     [1.]]
     """
     x_train_basis, x_test_basis = x_train[:, idx], x_test[:, idx]
     d = x_train_basis.shape[1]
@@ -260,8 +243,17 @@ def OHE_data(x_train, x_test, idx):
     OHE_features_test = []
 
     for feature in range(d):
-        OHE_features_train.append(one_hot_encode(x_train_basis[:, feature]))
-        OHE_features_test.append(one_hot_encode(x_test_basis[:, feature]))
+        # Get combined unique categories from both train and test
+        train_feature = x_train_basis[:, feature]
+        test_feature = x_test_basis[:, feature]
+        all_categories = np.unique(np.concatenate([train_feature, test_feature]))
+        
+        # Encode both train and test using the same categories
+        train_encoded = one_hot_encode(train_feature, categories=all_categories)
+        test_encoded = one_hot_encode(test_feature, categories=all_categories)
+        
+        OHE_features_train.append(train_encoded)
+        OHE_features_test.append(test_encoded)
 
     return np.column_stack(OHE_features_train), np.column_stack(OHE_features_test)
 
@@ -406,8 +398,8 @@ def preprocessing_pipeline(x_train, x_test, OHE_idx, normalization_idx, apply_co
         correlation_matrix = np.corrcoef(normalized_cols, rowvar=False)
         
         # Visualize correlation matrix
-        plt.figure(figsize=(12, 10))
-        sns.heatmap(correlation_matrix, cmap='coolwarm', annot=False)
+        #plt.figure(figsize=(12, 10))
+        #sns.heatmap(correlation_matrix, cmap='coolwarm', annot=False)
         
         print(f"Number of features before removing highly correlated features: {x_train_processed.shape[1]}")
 
