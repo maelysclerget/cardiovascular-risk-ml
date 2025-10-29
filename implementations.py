@@ -270,14 +270,9 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma):
     -------
     (np.array, float) Final weights and their corresponding loss
     """
-    w = initial_w.copy()
-    losses = []
+    w = initial_w
     
-    for i in range(max_iters):
-        # Compute current loss
-        current_loss = logistic_loss_function(y, tx, w)
-        losses.append(current_loss)
-        
+    for _ in range(max_iters):
         # Compute gradient and update weights
         gradient = compute_gradient_LR(y, tx, w)
         w = w - gamma * gradient
@@ -353,20 +348,15 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     -------
     (np.array, float) Final weights and their corresponding loss
     """
-    w = initial_w.copy()
-    losses = []
+    w = initial_w
     
-    for i in range(max_iters):
-        # Compute current loss
-        current_loss = logistic_loss_function(y, tx, w, lambda_)
-        losses.append(current_loss)
-        
+    for _ in range(max_iters):
         # Compute gradient and update weights
         gradient = compute_gradient_LR(y, tx, w, lambda_)
         w = w - gamma * gradient
     
     # Final loss computation
-    final_loss = logistic_loss_function(y, tx, w, lambda_)
+    final_loss = logistic_loss_function(y, tx, w)
     
     return w, final_loss
 
@@ -395,7 +385,7 @@ def reg_logistic_regression_with_early_stopping(y, tx, lambda_, initial_w, max_i
     
     for i in range(max_iters):
         # Compute current loss
-        current_loss = logistic_loss_function(y, tx, w, lambda_)
+        current_loss = logistic_loss_function(y, tx, w)
         losses.append(current_loss)
         
         # Compute gradient and update weights
@@ -417,11 +407,42 @@ def reg_logistic_regression_with_early_stopping(y, tx, lambda_, initial_w, max_i
             print(f"Iteration {i+1}/{max_iters}, Loss: {current_loss:.6f}")
     
     # Final loss computation
-    final_loss = logistic_loss_function(y, tx, w, lambda_)
+    final_loss = logistic_loss_function(y, tx, w)
     
     return w, final_loss
 
-def reg_logistic_regression_l1(y, tx, lambda_, initial_w, max_iters, gamma, threshold=1e-8, verbose=True):
+def reg_logistic_regression_l1(y, tx, lambda_, initial_w, max_iters, gamma):
+    """
+    Regularized logistic regression using Gradient Descent (GD) with L1 regularization.
+    Includes early stopping based on convergence criteria.
+
+    Parameters
+    ----------
+    y : (np.array) Output data points (0 or 1)
+    tx : (np.array) Input data points
+    lambda_ : (float) Regularization parameter
+    initial_w : (np.array) Initial weights
+    max_iters : (int) Maximal number of iterations
+    gamma : (float) Learning rate
+
+    Returns
+    -------
+    (np.array, float) Final weights and their corresponding loss
+    """
+    w = initial_w
+    
+    for i in range(max_iters):
+        
+        # Compute gradient and update weights
+        gradient = compute_gradient_LR_l1(y, tx, w, lambda_)
+        w = w - gamma * gradient
+    
+    # Final loss computation
+    final_loss = logisitc_loss_function_l1(y, tx, w)
+    
+    return w, final_loss
+
+def reg_logistic_regression_l1_with_early_stopping(y, tx, lambda_, initial_w, max_iters, gamma, threshold=1e-8, verbose=True):
     """
     Regularized logistic regression using Gradient Descent (GD) with L1 regularization.
     Includes early stopping based on convergence criteria.
@@ -446,7 +467,7 @@ def reg_logistic_regression_l1(y, tx, lambda_, initial_w, max_iters, gamma, thre
     
     for i in range(max_iters):
         # Compute current loss
-        current_loss = logisitc_loss_function_l1(y, tx, w, lambda_)
+        current_loss = logisitc_loss_function_l1(y, tx, w)
         losses.append(current_loss)
         
         # Compute gradient and update weights
@@ -468,10 +489,9 @@ def reg_logistic_regression_l1(y, tx, lambda_, initial_w, max_iters, gamma, thre
             print(f"Iteration {i+1}/{max_iters}, Loss: {current_loss:.6f}")
     
     # Final loss computation
-    final_loss = logisitc_loss_function_l1(y, tx, w, lambda_)
+    final_loss = logisitc_loss_function_l1(y, tx, w)
     
     return w, final_loss
-
 
 def build_k_indices(y, k_fold, seed):
     """
@@ -545,7 +565,7 @@ def precision_recall_f1(y_true, y_pred):
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
     return {"precision": precision, "recall": recall, "f1": f1}
 
-def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling = None, algorithm = "l2", cutoff = 0.5, max_iters=1000):
+def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling = None, factor = 1, algorithm = "l2", cutoff = 0.5, max_iters=1000):
     """
     Cross validation for one fold of regularized logistic regression.
 
@@ -563,6 +583,7 @@ def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, 
     lambda_ : (float) Regularization parameter
     gamma : (float) Learning rate
     sampling : (str or None) Sampling method: None, 'oversampling', or 'undersampling'
+    factor : (int) Sampling factor
     algorithm : (str) Algorithm choice: 'l2' for L2 regularization, 'l1' for L1 regularization
     cutoff : (float) Threshold for converting predicted probabilities to class labels (default: 0.5)
     max_iters : (int) Maximum iterations
@@ -586,9 +607,9 @@ def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, 
     if sampling == None:
         pass
     elif sampling == "oversampling":
-        tx_tr, y_tr = oversampling(tx_tr, y_tr)
+        tx_tr, y_tr = oversampling(tx_tr, y_tr, factor)
     elif sampling == "undersampling":
-        tx_tr, y_tr = undersampling(tx_tr, y_tr)
+        tx_tr, y_tr = undersampling(tx_tr, y_tr, factor)
     else:
         raise ValueError("Incorrect sampling method")
 
@@ -608,13 +629,13 @@ def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, 
 
     metrics_tr = precision_recall_f1(y_tr, y_tr_pred)
     metrics_te = precision_recall_f1(y_te, y_te_pred)
-    metrics_tr["loss"] = logistic_loss_function(y_tr, tx_tr, w, lambda_)
-    metrics_te["loss"] = logistic_loss_function(y_te, tx_te, w, lambda_)    
+    metrics_tr["loss"] = logistic_loss_function(y_tr, tx_tr, w)
+    metrics_te["loss"] = logistic_loss_function(y_te, tx_te, w)    
 
     return metrics_tr, metrics_te
 
 
-def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, lambdas, gammas, samplings, algorithms, cutoffs, max_iters=1000, seed=42, verbose=True):
+def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, lambdas, gammas, samplings, factors, algorithms, cutoffs, max_iters=1000, seed=42, verbose=True):
     """
     Perform grid search cross-validation for regularized logistic regression.
 
@@ -639,6 +660,8 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
         Learning rates to test.
     samplings : iterable
         Sampling strategies to test (e.g., None, 'undersample', 'oversample').
+    factors : iterable
+        Sampling factors to test.
     algorithms : iterable
         Algorithms to test (e.g., 'l2', 'l1').
     cutoffs : iterable
@@ -665,7 +688,7 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
 
     results = []
 
-    for lambda_, gamma, degree, sampling, algorithm, cutoff in product(lambdas, gammas, degrees, samplings, algorithms, cutoffs):
+    for lambda_, gamma, degree, sampling, factor, algorithm, cutoff in product(lambdas, gammas, degrees, samplings, factors, algorithms, cutoffs):
 
         if verbose:
             print("-----------------------------------------")
@@ -677,6 +700,8 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
             "gamma": gamma,
             "degree": degree,
             "sampling": sampling,
+            "factor": factor,
+            "algorithm": algorithm,
             "cutoff": cutoff
         }
     
@@ -686,8 +711,12 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
         total_f1_te = 0
 
         for k in range(k_fold):
+
+            if sampling == None and factor != 1:
+                break
+
             metrics_tr, metrics_te = cross_validation_logistic(
-                y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling, algorithm, cutoff, max_iters
+                y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling, factor, algorithm, cutoff, max_iters
             )
             total_loss_tr += metrics_tr["loss"]
             total_loss_te += metrics_te["loss"]

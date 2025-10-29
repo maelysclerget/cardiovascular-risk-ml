@@ -257,7 +257,7 @@ def OHE_data(x_train, x_test, idx):
 
     return np.column_stack(OHE_features_train), np.column_stack(OHE_features_test)
 
-def undersampling(x, y, seed = 42):
+def undersampling(x, y, factor = 1, seed = 42):
     """
     Balance dataset by randomly removing samples from the majority class.
     
@@ -268,6 +268,7 @@ def undersampling(x, y, seed = 42):
     ----------
     x : (np.array) (n_samples, n_features) Input feature matrix
     y : (np.array) (n_samples,) Target labels corresponding to training data
+    factor : (int) Reduction factor for undersampling the majority class
     seed : (int) Random seed for reproducible sampling
 
     Returns
@@ -294,7 +295,7 @@ def undersampling(x, y, seed = 42):
     high_idx = np.where(y == high_val)[0]
 
     fold = np.floor(higher/lower)
-    n_drop = np.floor((fold - 1)*higher/fold)
+    n_drop = np.floor((fold - 1)*higher/(factor*fold))
 
     rng = np.random.default_rng(seed)
     drop_columns_idx = rng.choice(high_idx, size=int(n_drop), replace=False)
@@ -304,7 +305,7 @@ def undersampling(x, y, seed = 42):
 
     return x_reduced, y_reduced
 
-def oversampling(x, y):
+def oversampling(x, y, factor = 1):
     """
     Balance dataset by duplicating samples from the minority class.
     
@@ -315,6 +316,7 @@ def oversampling(x, y):
     ----------
     x : (np.array) (n_samples, n_features) Input feature matrix
     y : (np.array) (n_samples,) Target labels corresponding to training data
+    factor : (int) Multiplicative factor for oversampling the minority class
 
     Returns
     -------
@@ -339,7 +341,7 @@ def oversampling(x, y):
 
     low_idx = np.where(y == low_val)[0]
 
-    fold = np.floor(higher/lower)
+    fold = np.floor(higher*factor/lower)
 
     x_duplicated_points = np.repeat(x[low_idx], int(fold - 1), axis=0)
     y_duplicated_points = np.repeat(y[low_idx], int(fold - 1), axis=0)
