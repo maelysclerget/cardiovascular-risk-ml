@@ -17,6 +17,7 @@ def main():
         dtype=int,
         usecols=1,
     )
+    
     x_train_raw_ = np.genfromtxt(
         os.path.join('data', 'processed', 'dataset_features_removed', "x_train_filled.csv"), delimiter=",", skip_header=1
     )
@@ -40,10 +41,7 @@ def main():
     x_train, x_test, normalized_cols_idx = preprocessing_pipeline(
         x_train_raw_, x_test_raw_, OHE_idx, normalization_idx, True, 0.9
     )
-
-    #  x_train = x_train_pre[:, 1:]  # get rid of ID column, already removed in preprocessing_pipeline
-    # x_test = x_test_pre[:, 1:]  # get rid of ID column, already removed in preprocessing_pipeline
-
+    
     print("\nShapes after preprocessing:")
     print("Shape of x_train after preprocessing:", x_train.shape)
     print("Shape of x_test after preprocessing:", x_test.shape)
