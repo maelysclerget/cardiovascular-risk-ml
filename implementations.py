@@ -618,9 +618,9 @@ def cross_validation_logistic(y, tx, k_indices, normalized_cols_idx, degree, k, 
 
     # Train model (silent mode for CV with looser threshold for speed)
     if algorithm == "l2":
-        w, _ = reg_logistic_regression_with_early_stopping(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma, threshold=1e-6, verbose=False)
+        w, _ = reg_logistic_regression(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma)
     elif algorithm == "l1":
-        w, _ = reg_logistic_regression_l1(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma, threshold=1e-6, verbose=False)
+        w, _ = reg_logistic_regression_l1(y_tr, tx_tr, lambda_, initial_w, max_iters, gamma)
     else:
         raise ValueError("Incorrect algorithm choice")
     
