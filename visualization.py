@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 from helpers import load_csv_data
+from collections import defaultdict
 
 def load_data(data_path="dataset/", sub_sample=False):
     """
@@ -136,17 +137,24 @@ def plot_metrics_vs_hyperparameter(results_list, hyperparameter_name, metric_nam
     metric_names : list of str
         List of metric names to plot on y-axis.
     """
-    metric_array = np.array([res[metric_name] for res in results_list])
-    hyperparameter_array = np.array([res[hyperparameter_name] for res in results_list])
+    hyperparameter   = [r[hyperparameter_name] for r in results_list]
+    metric = [r[metric_name] for r in results_list]
     
-    plt.figure(figsize=(10, 6))
-    plt.plot(hyperparameter_array, metric_array, marker='o')
+    data = defaultdict(list)
+    for met, hyper in zip(hyperparameter, metric):
+        data[hyper].append(met)
+
+    means = {hyper: np.mean(met) for hyper, met in data.items()}
+    stds  = {hyper: np.std(met)  for hyper, met in data.items()}
+
+    plt.figure(figsize=(8, 5))
+    plt.errorbar(list(means.keys()), list(means.values()), yerr=list(stds.values()),
+                fmt='o-', capsize=5)
     plt.xlabel(hyperparameter_name)
-    plt.ylabel(metric_name)
-    plt.title(f'{metric_name} vs {hyperparameter_name}')
-    plt.legend()
+    plt.ylabel(f'Mean {metric_name} ± Std')
+    plt.title(f'Mean ± {metric_name} vs {hyperparameter_name}')
     plt.grid(True)
-    plt.show()
+    plt.savefig(f'{metric_name}_vs_{hyperparameter_name}.png')
 
 def plot_metric(results_list, metric_name):
     """
@@ -159,15 +167,15 @@ def plot_metric(results_list, metric_name):
     metric_name : str
         Name of the metric to plot.
     """
-    metric_array = np.array([res[metric_name] for res in results_list])
-    
+    metric = np.array([r[metric_name] for r in results_list])
+
     plt.figure(figsize=(10, 6))
-    plt.plot(metric_array, marker='o')
+    plt.plot(metric, marker='o')
     plt.xlabel('Hyperparameter Combination Index')
     plt.ylabel(metric_name)
     plt.title(f'{metric_name} over Hyperparameter Combination Index')
     plt.grid(True)
-    plt.show()
+    plt.savefig(f'{metric_name}_over_hyperparameter_index.png')
 
 if __name__ == "__main__":
     x_train, x_test, y_train, train_ids, test_ids = load_data()
