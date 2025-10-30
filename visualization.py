@@ -137,11 +137,11 @@ def plot_metrics_vs_hyperparameter(results_list, hyperparameter_name, metric_nam
     metric_names : list of str
         List of metric names to plot on y-axis.
     """
-    hyperparameter   = [r[hyperparameter_name] for r in results_list]
+    hyperparameter = [r[hyperparameter_name] for r in results_list]
     metric = [r[metric_name] for r in results_list]
     
     data = defaultdict(list)
-    for met, hyper in zip(hyperparameter, metric):
+    for met, hyper in zip(metric, hyperparameter):
         data[hyper].append(met)
 
     means = {hyper: np.mean(met) for hyper, met in data.items()}

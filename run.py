@@ -1,6 +1,7 @@
 import numpy as np
 import os
 from preprocessing import preprocessing_pipeline
+from visualization import plot_metrics_vs_hyperparameter, plot_metric
 import matplotlib.pyplot as plt
 from collections import defaultdict
 
@@ -81,13 +82,13 @@ def main():
     tx_test = np.c_[np.ones((x_test.shape[0], 1)), x_test]
     
     # Hyperparameter tuning (example values, adjust as needed)
-    lambda_list    = np.linspace(1e-6, 1e-4, 4)  # Regularization strength (4 values)
+    lambda_list    = [1e-4, 1e-5]  # Regularization strength (4 values)
     gamma_list     = [0.15,0.20,0.25,0.30]   # Learning rate (4 values)
     degree_list    = [1]                                  # Polynomial degree
-    sampling_list  = ['oversampling']      # Sampling strategy
-    factor_list    = [0.85, 0.9, 0.95]                                # Sampling factor
-    algorithm_list = ['l2','l1']                           # Regularization type
-    cutoff_list    = [0.67, 0.7, 0.73]                   # Classification threshold
+    sampling_list  = [None]      # Sampling strategy
+    factor_list    = [1]                                # Sampling factor
+    algorithm_list = ['l2']                           # Regularization type
+    cutoff_list    = [0.67]                   # Classification threshold
     
     # Perform cross-validation to find the best hyperparameters
     print("\nStarting cross-validation for hyperparameter tuning...")
@@ -112,93 +113,101 @@ def main():
     print(best_f1_result)
     print("\nBest hyperparameters by Loss:")
     print(best_loss_result) 
-    
-    f1_scores = [r['avg_f1_te'] for r in all_results]
-    lambdas   = [r['lambda'] for r in all_results]
 
-    data = defaultdict(list)
-    for lam, f1 in zip(lambdas, f1_scores):
-        data[lam].append(f1)
+    # Visualize results
+    plot_metrics_vs_hyperparameter(all_results, 'lambda', 'avg_f1_te')
+    plot_metrics_vs_hyperparameter(all_results, 'gamma', 'avg_f1_te')
+    plot_metrics_vs_hyperparameter(all_results, 'cutoff', 'avg_f1_te')
+    plot_metrics_vs_hyperparameter(all_results, 'factor', 'avg_f1_te')
+    plot_metric(all_results, 'avg_f1_te')   
+    plot_metric(all_results, 'avg_loss_te') 
 
-    means = {lam: np.mean(vals) for lam, vals in data.items()}
-    stds  = {lam: np.std(vals)  for lam, vals in data.items()}
+    # f1_scores = [r['avg_f1_te'] for r in all_results]
+    # lambdas   = [r['lambda'] for r in all_results]
 
-    plt.figure(figsize=(8, 5))
-    plt.errorbar(list(means.keys()), list(means.values()), yerr=list(stds.values()),
-                fmt='o-', capsize=5)
-    plt.xlabel('Lambda')
-    plt.ylabel('Mean F1 Score')
-    plt.title('Mean ± Std F1 Score vs Lambda')
-    plt.grid(True)
-    plt.savefig('f1_score_vs_lambda_3.png')
+    # data = defaultdict(list)
+    # for lam, f1 in zip(lambdas, f1_scores):
+    #     data[lam].append(f1)
 
-    # Plotting mean F1 Score per Gamma value
-    gammas   = [r['gamma'] for r in all_results]
+    # means = {lam: np.mean(vals) for lam, vals in data.items()}
+    # stds  = {lam: np.std(vals)  for lam, vals in data.items()}
 
-    data = defaultdict(list)
-    for gamma, f1 in zip(gammas, f1_scores):
-        data[gamma].append(f1)
+    # plt.figure(figsize=(8, 5))
+    # plt.errorbar(list(means.keys()), list(means.values()), yerr=list(stds.values()),
+    #             fmt='o-', capsize=5)
+    # plt.xlabel('Lambda')
+    # plt.ylabel('Mean F1 Score')
+    # plt.title('Mean ± Std F1 Score vs Lambda')
+    # plt.grid(True)
+    # plt.savefig('f1_score_vs_lambda_3.png')
 
-    means = {gamma: np.mean(vals) for gamma, vals in data.items()}
-    stds  = {gamma: np.std(vals)  for gamma, vals in data.items()}
+    # # Plotting mean F1 Score per Gamma value
+    # gammas   = [r['gamma'] for r in all_results]
 
-    plt.figure(figsize=(8, 5))
-    plt.errorbar(list(means.keys()), list(means.values()), yerr=list(stds.values()),
-                fmt='o-', capsize=5)
-    plt.xlabel('Gamma')
-    plt.ylabel('Mean F1 Score')
-    plt.title('Mean ± Std F1 Score vs Gamma')
-    plt.grid(True)
-    plt.savefig('f1_score_vs_gamma_3.png')
+    # data = defaultdict(list)
+    # for gamma, f1 in zip(gammas, f1_scores):
+    #     data[gamma].append(f1)
 
-    # Plotting mean F1 Score per Threshold value
-    cutoffs = [r['cutoff'] for r in all_results]
+    # means = {gamma: np.mean(vals) for gamma, vals in data.items()}
+    # stds  = {gamma: np.std(vals)  for gamma, vals in data.items()}
 
-    data = defaultdict(list)
-    for cutoff, f1 in zip(cutoffs, f1_scores):
-        data[cutoff].append(f1)
+    # plt.figure(figsize=(8, 5))
+    # plt.errorbar(list(means.keys()), list(means.values()), yerr=list(stds.values()),
+    #             fmt='o-', capsize=5)
+    # plt.xlabel('Gamma')
+    # plt.ylabel('Mean F1 Score')
+    # plt.title('Mean ± Std F1 Score vs Gamma')
+    # plt.grid(True)
+    # plt.savefig('f1_score_vs_gamma_3.png')
 
-    means = {cutoff: np.mean(vals) for cutoff, vals in data.items()}
-    stds  = {cutoff: np.std(vals)  for cutoff, vals in data.items()}
+    # # Plotting mean F1 Score per Threshold value
+    # cutoffs = [r['cutoff'] for r in all_results]
 
-    plt.figure(figsize=(8, 5))
-    plt.errorbar(list(means.keys()), list(means.values()), yerr=list(stds.values()),
-                fmt='o-', capsize=5)
-    plt.xlabel('Threshold (Cutoff)')
-    plt.ylabel('Mean F1 Score')
-    plt.title('Mean ± Std F1 Score vs Threshold')
-    plt.grid(True)
-    plt.savefig('f1_score_vs_threshold_3.png')
+    # data = defaultdict(list)
+    # for cutoff, f1 in zip(cutoffs, f1_scores):
+    #     data[cutoff].append(f1)
 
-    # Plotting mean F1 Score per Sampling Factor value
-    factors = [r['factor'] for r in all_results]
+    # means = {cutoff: np.mean(vals) for cutoff, vals in data.items()}
+    # stds  = {cutoff: np.std(vals)  for cutoff, vals in data.items()}
 
-    data = defaultdict(list)
-    for factor, f1 in zip(factors, f1_scores):
-        data[factor].append(f1)
+    # plt.figure(figsize=(8, 5))
+    # plt.errorbar(list(means.keys()), list(means.values()), yerr=list(stds.values()),
+    #             fmt='o-', capsize=5)
+    # plt.xlabel('Threshold (Cutoff)')
+    # plt.ylabel('Mean F1 Score')
+    # plt.title('Mean ± Std F1 Score vs Threshold')
+    # plt.grid(True)
+    # plt.savefig('f1_score_vs_threshold_3.png')
 
-    means = {factor: np.mean(vals) for factor, vals in data.items()}
-    stds  = {factor: np.std(vals)  for factor, vals in data.items()}
+    # # Plotting mean F1 Score per Sampling Factor value
+    # factors = [r['factor'] for r in all_results]
 
-    plt.figure(figsize=(8, 5))
-    plt.errorbar(list(means.keys()), list(means.values()), yerr=list(stds.values()),
-                fmt='o-', capsize=5)
-    plt.xlabel('Sampling Factor')
-    plt.ylabel('Mean F1 Score')
-    plt.title('Mean ± Std F1 Score vs Sampling Factor')
-    plt.grid(True)
-    plt.savefig('f1_score_vs_sampling_factor_3.png')
+    # data = defaultdict(list)
+    # for factor, f1 in zip(factors, f1_scores):
+    #     data[factor].append(f1)
 
-    metric_array = np.array([res['avg_f1_te'] for res in all_results])
+    # means = {factor: np.mean(vals) for factor, vals in data.items()}
+    # stds  = {factor: np.std(vals)  for factor, vals in data.items()}
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(metric_array, marker='o')
-    plt.xlabel('Hyperparameter Combination Index')
-    plt.ylabel('F1 Score')
-    plt.title(f'F1 Score over Hyperparameter Combination Index')
-    plt.grid(True)
-    plt.savefig('f1_score_over_hyperparameter_index_3.png')
-    plt.show()
+    # plt.figure(figsize=(8, 5))
+    # plt.errorbar(list(means.keys()), list(means.values()), yerr=list(stds.values()),
+    #             fmt='o-', capsize=5)
+    # plt.xlabel('Sampling Factor')
+    # plt.ylabel('Mean F1 Score')
+    # plt.title('Mean ± Std F1 Score vs Sampling Factor')
+    # plt.grid(True)
+    # plt.savefig('f1_score_vs_sampling_factor_3.png')
+
+    # metric_array = np.array([res['avg_f1_te'] for res in all_results])
+
+    # plt.figure(figsize=(10, 6))
+    # plt.plot(metric_array, marker='o')
+    # plt.xlabel('Hyperparameter Combination Index')
+    # plt.ylabel('F1 Score')
+    # plt.title(f'F1 Score over Hyperparameter Combination Index')
+    # plt.grid(True)
+    # plt.savefig('f1_score_over_hyperparameter_index_3.png')
+    # plt.show()
     
     # ## Train final model on full training data with best hyperparameters
     # z_test = tx_test @ best_f1_result["weights"]
