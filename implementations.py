@@ -690,6 +690,9 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
 
     for lambda_, gamma, degree, sampling, factor, algorithm, cutoff in product(lambdas, gammas, degrees, samplings, factors, algorithms, cutoffs):
 
+        if sampling == None and factor != 1 or sampling == "undersampling" and factor < 1:
+            break
+        
         if verbose:
             print("-----------------------------------------")
             print("Hyperparameter combination:\n")
@@ -711,9 +714,6 @@ def logistic_cross_validation_demo(y, tx, k_fold, normalized_cols_idx, degrees, 
         total_f1_te = 0
 
         for k in range(k_fold):
-
-            if sampling == None and factor != 1 or sampling == "undersampling" and factor < 1:
-                break
 
             metrics_tr, metrics_te = cross_validation_logistic(
                 y, tx, k_indices, normalized_cols_idx, degree, k, lambda_, gamma, sampling, factor, algorithm, cutoff, max_iters
