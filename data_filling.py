@@ -458,17 +458,19 @@ def apply_single_feature_imputation(
                 valid_range = config["distribution_range"]
                 values_to_redistribute = config["values_to_redistribute"]
 
-                train_feature_new, test_feature_new, dist_info = (
-                    conditional_redistribute_with_distribution(
-                        train_feature,
-                        test_feature,
-                        train_condition,
-                        test_condition,
-                        condition_value=condition_value,
-                        values_to_redistribute=values_to_redistribute,
-                        valid_range=valid_range,
-                        random_state=random_state,
-                    )
+                (
+                    train_feature_new,
+                    test_feature_new,
+                    dist_info,
+                ) = conditional_redistribute_with_distribution(
+                    train_feature,
+                    test_feature,
+                    train_condition,
+                    test_condition,
+                    condition_value=condition_value,
+                    values_to_redistribute=values_to_redistribute,
+                    valid_range=valid_range,
+                    random_state=random_state,
                 )
 
                 x_train[:, feature_idx] = train_feature_new
