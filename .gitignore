@@ -13,3 +13,7 @@ dataset/
 
 # UV Environment 
 .venv/
+
+# Plots
+Plots/
+plots/

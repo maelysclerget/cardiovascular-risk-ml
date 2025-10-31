@@ -1,117 +1,68 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/UcP9Py08)
 
-# Machine Learning Project - Data Imputation and Analysis
 
-## Overview
-This project implements various data imputation techniques and machine learning models for analyzing and predicting outcomes in a healthcare dataset. It includes comprehensive data preprocessing, multiple imputation strategies, and model evaluation pipelines.
+# Predicting Cardiovascular Disease with Machine Learning ❤️‍🩹
 
-## Repository Structure
-```
-project-1-heartbreakers/
-├── src/                    # Source code for core functionality
-│   ├── implementations.py  # Core ML model implementations
-│   ├── helpers.py         # Utility functions
-│   ├── preprocessing.py   # Data preprocessing functions
-│   ├── data_filling.py   # Data imputation implementations
-│   ├── visualization.py   # Data visualization functions
-│   └── mae_*.py          # MAE-specific implementations
-├── notebooks/             # Jupyter notebooks for analysis
-│   └── nan_analysis.ipynb # Missing value analysis notebook
-├── configs/               # Configuration files
-│   ├── imputation_configs.py  # Imputation parameters
-│   └── mae_dictionnary.py    # MAE-specific configurations
-├── scripts/              # Execution scripts
-│   ├── run.py           # Main execution script
-│   ├── apply_imputation.py    # Imputation pipeline
-│   └── run_feature_removal.py # Feature selection script
-├── data/                # Data directory
-│   ├── raw/            # Original datasets
-│   ├── processed/      # Processed datasets
-│   └── features/       # Feature-related files
-├── results/            # Model outputs and submissions
-└── README.md
-```
+## Project Description 🚩
 
-## Setup and Installation
+Cardiovascular diseases (CVDs) are a leading cause of death worldwide. This project leverages machine learning to predict the risk of developing CVDs, such as heart attacks, using health, lifestyle, and demographic data. We use data from the Behavioral Risk Factor Surveillance System (BRFSS) to build binary classification models that estimate the likelihood of Myocardial Infarct or Coronary Heart Disease (MICHD) for an individual.
 
-1. Clone the repository:
-```bash
-git clone https://github.com/CS-433/project-1-heartbreakers.git
-cd project-1-heartbreakers
-```
+## Table of Contents 📋
 
-2. Set up Python environment (Python 3.8+ recommended):
-```bash
-python -m venv env
-source env/bin/activate  # On Windows: env\Scripts\activate
-pip install -r requirements.txt
-```
+- [Project Description](#project-description)
+- [UV Virtual Environment Setup](#uv-virtual-environment-setup)
+- [Data Processing](#data-processing)
+- [Implementation](#implementation)
+- [Authors](#authors)
 
-## Usage
+## UV Virtual Environment Setup 🌳
 
-### Data Imputation Pipeline
-To run the complete imputation pipeline:
-```bash
-python scripts/apply_imputation.py
-```
+We use [uv](https://github.com/astral-sh/uv) as the project's reproducible Python virtual environment. To set up the environment,
+execute the following commands after cloning the project:
 
-### Feature Selection
-To perform feature selection:
-```bash
-python scripts/run_feature_removal.py
-```
+1. **Install uv:** (if not already installed):
+   ```bash
+   pip install uv
+   ```
 
-### Model Training and Evaluation
-To train and evaluate models:
-```bash
-python scripts/run.py
-```
+2. **Ensure existence of a viratual environment:**
+   ```bash
+   uv venv .venv
+   ```
 
-## Note on Naming Conventions
-Some functions and files in this project may contain references to "mae" in their names (e.g., `mae_*` files or configurations). These names originated from one of the team member's initials (MAE) during initial development. While most instances have been updated to more descriptive names (e.g., `imputation_configs_cont.py`), you might still encounter some legacy naming patterns throughout the codebase. This naming inconsistency does not affect functionality.
+3. **Activate the environment:**
+   ```bash
+   source .venv/bin/activate
+   ```
 
-## Project Components
+4. **Install project dependencies:**
+   ```bash
+   uv pip install .
+   ```
 
-### Data Preprocessing
-- Missing value analysis and visualization
-- Multiple imputation strategies including:
-  - Mean imputation
-  - Median imputation
-  - Mode imputation
-  - Custom imputation for specific features
-- Feature engineering and selection
+## Data Processing 📊
 
-### Models
-- Logistic Regression with regularization
-- Cross-validation implementation
-- F1-score optimization
-- Threshold optimization for binary classification
+Our data pipeline includes:
 
-### Evaluation
-- Model performance metrics
-- Cross-validation results
-- Feature importance analysis
-- Submission file generation
+- **Imputation:** Missing values were carefully imputated separately for each single feature to ensure data quality. The impuation was based on the weighted distribution created by the existing answers to each question. Simple weighted average was not employed!
+- **Feature removal:** Certain features were removed as they contained too many missing values or did not apply to the entire patient population
+- **One-hot encoding:** Converting categorical variables into binary indicator columns. 
+  ⚠️ Dummy Variable Trap avoided: (k - 1) One-hot encoding
+- **Normalization:** Normalizing ordinal and continuous features to have zero mean and unit variance.
+- **Correlated Feature Analysis:** Optional removal of highly correlated, normalized features. 
+  ⚠️ Does not apply to One-hot encoded features!
 
-## Results
-The results directory contains:
-- Model submission files with different configurations
-- Performance metrics across validation sets
-- Feature selection and importance summaries
+## Implementation 🔌
 
-## Contributing
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Key methods and models:
 
-## Team
-[Please add team member names and contact information]
+- **Polynomial Basis Expansion:** Creating pseudo-polynomial feature expansion for normalized variables.
+  ⚠️ Inter-feature products are not considered to avoid having thousands of features.
+- **Oversampling/Undersampling:** Addressing class imbalance by resampling the training data.
+- **L1 and L2 Logistic Regression:** Regularized logistic regression for binary classification.
+- **Cross-Validation:** Robust model evaluation using k-fold cross-validation.
 
-## License
-This project is part of the Machine Learning course (CS-433) at EPFL.
+## Authors ✏️
 
-## Acknowledgments
-- EPFL Machine Learning Course Staff
-- Project supervisors and teaching assistants
+- Maëlys Clerget <maelys.clerget@epfl.ch>
+- Georges-Alex Nahas <georges-alex.nahas@epfl.ch>
+- Aleksandar Mihaylov <aleksandar.mihaylov@epfl.ch>
