@@ -33,6 +33,9 @@ def run_logistic_regression_submission():
     )
     train_ids = x_train_raw_[:, 0].astype(dtype=int)
     test_ids = x_test_raw_[:, 0].astype(dtype=int)
+    # Save test_ids to submission_data/
+    os.makedirs('submission_data', exist_ok=True)
+    np.save(os.path.join('submission_data', 'test_ids.npy'), test_ids)
 
     # Preprocess the data
     x_train, x_test, normalized_cols_idx = preprocessing_pipeline(
@@ -42,7 +45,9 @@ def run_logistic_regression_submission():
     tx_train = np.c_[np.ones((x_train.shape[0], 1)), x_train]
     tx_test = np.c_[np.ones((x_test.shape[0], 1)), x_test]
 
-    # Hyperparameters from user
+    # Best Hyperparameters 
+    # Model: l2-regularized logistic regression
+    # Samplimg method: oversampling
     lambda_ = 1.00e-06
     gamma = 0.3
     factor = 0.85
@@ -56,6 +61,8 @@ def run_logistic_regression_submission():
 
     # Predict on test set
     z_test = tx_test @ w
+    # Save z_test to submission_data/
+    np.save(os.path.join('submission_data', 'z_test.npy'), z_test)
     y_pred_prob = sigmoid(z_test)
     y_pred_binary = (y_pred_prob >= cutoff).astype(int)
     y_pred = 2 * y_pred_binary - 1  # Convert 0,1 back to -1,+1
