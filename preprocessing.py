@@ -5,10 +5,18 @@ import seaborn as sns
 
 # x_train_og, x_test_og, y_train_og, train_ids_og, test_ids_og = load_csv_data("dataset/")
 
-def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True):
+
+def preprocess_data(
+    x_train,
+    x_test,
+    fill_nan_values=True,
+    strategy="mean",
+    apply_correlation=True,
+    normalize=True,
+):
     """
     Preprocess the data by filling NaN values, removing correlated features, and normalizing.
-    
+
     This function applies a sequence of preprocessing steps to the input data, including:
     - Filling NaN values using a specified strategy
     - Removing highly correlated features
@@ -37,37 +45,39 @@ def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', appl
     """
     x_train_processed = x_train.copy()
     x_test_processed = x_test.copy()
-    
+
     if fill_nan_values:
 
-        if strategy == 'mean':
-            feature_means = np.nanmean(x_train, axis=0) #nanmean ignores NaN values
+        if strategy == "mean":
+            feature_means = np.nanmean(x_train, axis=0)  # nanmean ignores NaN values
             for col in range(x_train.shape[1]):
                 # Traiter train
-                nan_mask = np.isnan(x_train_processed[:, col]) 
+                nan_mask = np.isnan(x_train_processed[:, col])
                 x_train_processed[nan_mask, col] = feature_means[col]
-                
-                # Traiter test 
+
+                # Traiter test
                 nan_mask = np.isnan(x_test_processed[:, col])
                 x_test_processed[nan_mask, col] = feature_means[col]
 
-        elif strategy == 'median':
+        elif strategy == "median":
             feature_medians = np.nanmedian(x_train, axis=0)
             for col in range(x_train.shape[1]):
                 # Traiter train
                 nan_mask = np.isnan(x_train_processed[:, col])
                 x_train_processed[nan_mask, col] = feature_medians[col]
-                
-                # Traiter test 
+
+                # Traiter test
                 nan_mask = np.isnan(x_test_processed[:, col])
                 x_test_processed[nan_mask, col] = feature_medians[col]
 
-        elif strategy == 'zero':
+        elif strategy == "zero":
             x_train_processed[np.isnan(x_train_processed)] = 0
             x_test_processed[np.isnan(x_test_processed)] = 0
 
-        elif strategy == 'drop':
-            valid_features = ~np.isnan(x_train_processed).any(axis=0) # ~ inverse les boolean
+        elif strategy == "drop":
+            valid_features = ~np.isnan(x_train_processed).any(
+                axis=0
+            )  # ~ inverse les boolean
             x_train_processed = x_train_processed[:, valid_features]
             x_test_processed = x_test_processed[:, valid_features]
 
@@ -75,17 +85,18 @@ def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', appl
         print(f"Remaining NaN in training set: {np.sum(np.isnan(x_train_processed))}")
         print(f"Remaining NaN in test set: {np.sum(np.isnan(x_test_processed))}")
 
-
-    if apply_correlation: 
+    if apply_correlation:
         correlation_matrix = np.corrcoef(x_train_processed, rowvar=False)
-        
+
         # Visualize correlation matrix
         plt.figure(figsize=(12, 10))
-        sns.heatmap(correlation_matrix, cmap='coolwarm', annot=False)
-        
+        sns.heatmap(correlation_matrix, cmap="coolwarm", annot=False)
+
         threshold_high = 0.75
 
-        print(f"Number of features before removing highly correlated features: {x_train_processed.shape[1]}")
+        print(
+            f"Number of features before removing highly correlated features: {x_train_processed.shape[1]}"
+        )
 
         high_corr_pairs = [
             (i, j)
@@ -93,35 +104,41 @@ def preprocess_data(x_train, x_test, fill_nan_values=True, strategy='mean', appl
             for j in range(i + 1, correlation_matrix.shape[1])
             if abs(correlation_matrix[i, j]) > threshold_high
         ]
-        
+
         features_to_drop = set()
         for i, j in high_corr_pairs:
             features_to_drop.add(j)  # Arbitrarily drop the second feature in the pair
 
         # Remove the selected features by index
-        features_to_keep = [k for k in range(x_train_processed.shape[1]) if k not in features_to_drop]
+        features_to_keep = [
+            k for k in range(x_train_processed.shape[1]) if k not in features_to_drop
+        ]
         x_train_processed = x_train_processed[:, features_to_keep]
         x_test_processed = x_test_processed[:, features_to_keep]
-                
-        print(f"Number of features after removing highly correlated features: {x_train_processed.shape[1]}")
+
+        print(
+            f"Number of features after removing highly correlated features: {x_train_processed.shape[1]}"
+        )
         print("Highly correlated features:")
         for i, j in high_corr_pairs:
             print(f"Feature {i} and Feature {j}: {correlation_matrix[i, j]}")
         plt.show()
-    
+
     if normalize:
         # Use training data statistics to normalize both train and test
         feature_means = np.mean(x_train_processed, axis=0)
         feature_stds = np.std(x_train_processed, axis=0)
-        
+
         # Avoid division by zero for constant features
         feature_stds = np.where(feature_stds == 0, 1, feature_stds)
-        
+
         x_train_processed = (x_train_processed - feature_means) / feature_stds
         x_test_processed = (x_test_processed - feature_means) / feature_stds
-        
-        print(f"Features normalized. Train mean: {np.mean(x_train_processed):.6f}, Train std: {np.std(x_train_processed):.6f}")
-        
+
+        print(
+            f"Features normalized. Train mean: {np.mean(x_train_processed):.6f}, Train std: {np.std(x_train_processed):.6f}"
+        )
+
     return x_train_processed, x_test_processed
 
 
@@ -166,19 +183,20 @@ def normalize(x_train, x_test, idx):
 
     feature_means = np.mean(x_train_basis, axis=0)
     feature_stds = np.std(x_train_basis, axis=0)
-    
+
     # Avoid division by 0 when the standar deviation is 0
     feature_stds = np.where(feature_stds == 0, 1, feature_stds)
-    
+
     x_train_processed = (x_train_basis - feature_means) / feature_stds
     x_test_processed = (x_test_basis - feature_means) / feature_stds
-         
+
     return x_train_processed, x_test_processed
+
 
 def one_hot_encode(column, categories=None):
     """
     Convert a categorical column to one-hot encoded representation using k-1 encoding.
-    
+
     This function creates a binary matrix representation of categorical data,
     where each unique category is represented by a separate binary column.
     Uses k-1 encoding (drops the last category) to avoid multicollinearity.
@@ -201,7 +219,7 @@ def one_hot_encode(column, categories=None):
     n = column.shape[0]
     if categories is None:
         categories = np.unique(column)
-    
+
     # Ensure all values in column are present in categories
     if not np.all(np.isin(column, categories)):
         raise ValueError("Column contains values not present in provided categories")
@@ -209,10 +227,11 @@ def one_hot_encode(column, categories=None):
     ohe_matrix = np.zeros(shape=(n, len(categories) - 1))
     for i in range(n):
         idx = np.where(categories == column[i])[0][0]
-        if (idx != len(categories) - 1):
+        if idx != len(categories) - 1:
             ohe_matrix[i, idx] = 1
 
     return ohe_matrix
+
 
 def OHE_data(x_train, x_test, idx):
     """
@@ -247,20 +266,21 @@ def OHE_data(x_train, x_test, idx):
         train_feature = x_train_basis[:, feature]
         test_feature = x_test_basis[:, feature]
         all_categories = np.unique(np.concatenate([train_feature, test_feature]))
-        
+
         # Encode both train and test using the same categories
         train_encoded = one_hot_encode(train_feature, categories=all_categories)
         test_encoded = one_hot_encode(test_feature, categories=all_categories)
-        
+
         OHE_features_train.append(train_encoded)
         OHE_features_test.append(test_encoded)
 
     return np.column_stack(OHE_features_train), np.column_stack(OHE_features_test)
 
-def undersampling(x, y, factor = 1, seed = 42):
+
+def undersampling(x, y, factor=1, seed=42):
     """
     Balance dataset by randomly removing samples from the majority class.
-    
+
     This function reduces class imbalance by undersampling the majority class
     to match the minority class size, creating a balanced dataset.
 
@@ -276,7 +296,7 @@ def undersampling(x, y, factor = 1, seed = 42):
     (tuple) (train_reduced, test_reduced) where:
         - x_reduced: (np.array) Input data with majority class samples removed
         - y_reduced: (np.array) Corresponding labels with majority class samples removed
-    
+
     Examples
     --------
     >>> np.random.seed(42)
@@ -294,8 +314,8 @@ def undersampling(x, y, factor = 1, seed = 42):
 
     high_idx = np.where(y == high_val)[0]
 
-    fold = np.floor(higher/lower)
-    n_drop = np.floor((fold - 1)*higher/(factor*fold))
+    fold = np.floor(higher / lower)
+    n_drop = np.floor((fold - 1) * higher / (factor * fold))
 
     rng = np.random.default_rng(seed)
     drop_columns_idx = rng.choice(high_idx, size=int(n_drop), replace=False)
@@ -305,10 +325,11 @@ def undersampling(x, y, factor = 1, seed = 42):
 
     return x_reduced, y_reduced
 
-def oversampling(x, y, factor = 1):
+
+def oversampling(x, y, factor=1):
     """
     Balance dataset by duplicating samples from the minority class.
-    
+
     This function reduces class imbalance by oversampling the minority class
     to match the majority class size, creating a balanced dataset.
 
@@ -323,7 +344,7 @@ def oversampling(x, y, factor = 1):
     (tuple) (train_augmented, test_augmented) where:
         - x_augmented: (np.array) Input data with minority class samples duplicated
         - y_augmented: (np.array) Corresponding labels with minority class samples duplicated
-    
+
     Examples
     --------
     >>> np.random.seed(42)
@@ -341,7 +362,7 @@ def oversampling(x, y, factor = 1):
 
     low_idx = np.where(y == low_val)[0]
 
-    fold = np.floor(higher*factor/lower)
+    fold = np.floor(higher * factor / lower)
 
     x_duplicated_points = np.repeat(x[low_idx], int(fold - 1), axis=0)
     y_duplicated_points = np.repeat(y[low_idx], int(fold - 1), axis=0)
@@ -352,7 +373,14 @@ def oversampling(x, y, factor = 1):
     return x_augmented, y_augmented
 
 
-def preprocessing_pipeline(x_train, x_test, OHE_idx, normalization_idx, apply_correlation = True, corr_threshold = 0.75):   
+def preprocessing_pipeline(
+    x_train,
+    x_test,
+    OHE_idx,
+    normalization_idx,
+    apply_correlation=True,
+    corr_threshold=0.75,
+):
     """
     Apply a preprocessing pipeline with normalization, one-hot encoding, and optional correlation filtering.
 
@@ -387,23 +415,31 @@ def preprocessing_pipeline(x_train, x_test, OHE_idx, normalization_idx, apply_co
     x_train_OHE, x_test_OHE = OHE_data(x_train, x_test, OHE_idx)
     x_train_norm, x_test_norm = normalize(x_train, x_test, normalization_idx)
 
-    x_train_processed = np.concatenate([x_train_norm, x_train_OHE], axis = 1)
-    x_test_processed = np.concatenate([x_test_norm, x_test_OHE], axis = 1)
+    x_train_processed = np.concatenate([x_train_norm, x_train_OHE], axis=1)
+    x_test_processed = np.concatenate([x_test_norm, x_test_OHE], axis=1)
 
-    print(f"Number of normalized features: {len(normalization_idx)}, Number of OHE features: {len(OHE_idx)}", "\n")
-    print(f"The first {len(normalization_idx)} columns contain the normalized indices. The rest of the columns are OHE.", "\n")
+    print(
+        f"Number of normalized features: {len(normalization_idx)}, Number of OHE features: {len(OHE_idx)}",
+        "\n",
+    )
+    print(
+        f"The first {len(normalization_idx)} columns contain the normalized indices. The rest of the columns are OHE.",
+        "\n",
+    )
 
     normalized_cols_idx = np.arange(len(normalization_idx))
     normalized_cols = x_train_processed[:, normalized_cols_idx]
-    
-    if apply_correlation: 
+
+    if apply_correlation:
         correlation_matrix = np.corrcoef(normalized_cols, rowvar=False)
-        
+
         # Visualize correlation matrix
-        #plt.figure(figsize=(12, 10))
-        #sns.heatmap(correlation_matrix, cmap='coolwarm', annot=False)
-        
-        print(f"Number of features before removing highly correlated features: {x_train_processed.shape[1]}")
+        # plt.figure(figsize=(12, 10))
+        # sns.heatmap(correlation_matrix, cmap='coolwarm', annot=False)
+
+        print(
+            f"Number of features before removing highly correlated features: {x_train_processed.shape[1]}"
+        )
 
         high_corr_pairs = [
             (i, j)
@@ -411,28 +447,40 @@ def preprocessing_pipeline(x_train, x_test, OHE_idx, normalization_idx, apply_co
             for j in range(i + 1, correlation_matrix.shape[1])
             if abs(correlation_matrix[i, j]) > corr_threshold
         ]
-        
+
         features_to_drop = set()
         for i, j in high_corr_pairs:
             features_to_drop.add(j)  # Arbitrarily drop the second feature in the pair
 
-        x_train_processed = np.delete(x_train_processed, np.array(list(features_to_drop)), axis = 1)
-        x_test_processed = np.delete(x_test_processed, np.array(list(features_to_drop)), axis = 1)
+        x_train_processed = np.delete(
+            x_train_processed, np.array(list(features_to_drop)), axis=1
+        )
+        x_test_processed = np.delete(
+            x_test_processed, np.array(list(features_to_drop)), axis=1
+        )
 
         normalized_cols_idx = np.arange(len(normalization_idx) - len(features_to_drop))
 
-        print(f"Number of features after removing highly correlated features: {x_train_processed.shape[1]}")
+        print(
+            f"Number of features after removing highly correlated features: {x_train_processed.shape[1]}"
+        )
         print("Highly correlated features:")
         for i, j in high_corr_pairs:
             print(f"Feature {i} and Feature {j}: {correlation_matrix[i, j]}")
         plt.show()
 
-    print(f"Number of normalized features: {len(normalized_cols_idx)}, Number of OHE features: {len(OHE_idx)}", "\n")
-    print(f"The first {len(normalized_cols_idx)} columns contain the normalized indices. The rest of the columns are OHE.", "\n")
+    print(
+        f"Number of normalized features: {len(normalized_cols_idx)}, Number of OHE features: {len(OHE_idx)}",
+        "\n",
+    )
+    print(
+        f"The first {len(normalized_cols_idx)} columns contain the normalized indices. The rest of the columns are OHE.",
+        "\n",
+    )
 
     return x_train_processed, x_test_processed, normalized_cols_idx
 
-# if __name__ == "__main__":
-    # x_train, x_test = preprocess_data(x_train_og, x_test_og, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True)
-    # x_train, x_test, normalized_cols_idx = preprocessing_pipeline(x_train_og, x_test_og, OHE_idx = [0, 1, 2], normalization_idx = [3, 4])
 
+# if __name__ == "__main__":
+# x_train, x_test = preprocess_data(x_train_og, x_test_og, fill_nan_values=True, strategy='mean', apply_correlation=True, normalize=True)
+# x_train, x_test, normalized_cols_idx = preprocessing_pipeline(x_train_og, x_test_og, OHE_idx = [0, 1, 2], normalization_idx = [3, 4])

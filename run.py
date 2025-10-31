@@ -6,6 +6,7 @@ from helpers import create_csv_submission
 from implementations import oversampling
 
 # OHE_idx_bis = [12]
+#
 # def get_indices_difference():
 #     """
 #     Returns the list of indices between 1 and 218 (inclusive) that are NOT in OHE_idx_bis.
@@ -15,6 +16,7 @@ from implementations import oversampling
 #     diff = sorted(list(all_indices - ohe_bis_set))
 #     return diff
 # normalization_idx_bis = get_indices_difference()
+
 
 def run_logistic_regression_submission():
     # # Load the data
@@ -33,6 +35,7 @@ def run_logistic_regression_submission():
     # )
     # train_ids = x_train_raw_[:, 0].astype(dtype=int)
     # test_ids = x_test_raw_[:, 0].astype(dtype=int)
+    #
     # # Save test_ids to submission_data/
     # os.makedirs('submission_data', exist_ok=True)
     # np.save(os.path.join('submission_data', 'test_ids.npy'), test_ids)
@@ -45,7 +48,7 @@ def run_logistic_regression_submission():
     # tx_train = np.c_[np.ones((x_train.shape[0], 1)), x_train]
     # tx_test = np.c_[np.ones((x_test.shape[0], 1)), x_test]
 
-    # # Best Hyperparameters 
+    # # Best Hyperparameters
     # # Model: l2-regularized logistic regression
     # # Samplimg method: oversampling
     # lambda_ = 1.00e-06
@@ -65,8 +68,8 @@ def run_logistic_regression_submission():
     # # Save z_test to submission_data/
     # np.save(os.path.join('submission_data', 'z_test.npy'), z_test)
 
-    test_ids = np.load('submission_data/test_ids.npy')
-    z_test = np.load('submission_data/z_test.npy')
+    test_ids = np.load("submission_data/test_ids.npy")
+    z_test = np.load("submission_data/z_test.npy")
     cutoff = 0.67
 
     y_pred_prob = sigmoid(z_test)
@@ -74,12 +77,13 @@ def run_logistic_regression_submission():
     y_pred = 2 * y_pred_binary - 1  # Convert 0,1 back to -1,+1
 
     # Create submissions directory if it doesn't exist
-    submissions_dir = 'submissions'
+    submissions_dir = "submissions"
     os.makedirs(submissions_dir, exist_ok=True)
     submission_name = f"best_submission.csv"
     submission_path = os.path.join(submissions_dir, submission_name)
     create_csv_submission(test_ids, y_pred, submission_path)
     print(f"\nSubmission saved as: {submission_path}")
+
 
 if __name__ == "__main__":
     run_logistic_regression_submission()

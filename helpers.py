@@ -18,7 +18,7 @@ def build_poly(x, idx, degree):
 
     Returns
     -------
-    (np.array) (n_samples, num_features + num_poly_features) 
+    (np.array) (n_samples, num_features + num_poly_features)
     Original data with polynomial and cross terms of selected features up to the given degree appended as new columns.
 
     Examples
@@ -36,11 +36,10 @@ def build_poly(x, idx, degree):
     for deg in range(1, degree + 1):
         for feature in idx:
             features.append(x_basis[:, feature] ** deg)
-            
-    poly_expansion = np.column_stack(features)
-    x_rest = np.delete(x, idx, axis = 1)
-    return np.concatenate([poly_expansion, x_rest], axis=1)
 
+    poly_expansion = np.column_stack(features)
+    x_rest = np.delete(x, idx, axis=1)
+    return np.concatenate([poly_expansion, x_rest], axis=1)
 
 
 def load_csv_data(data_path, sub_sample=False):
@@ -108,5 +107,3 @@ def create_csv_submission(ids, y_pred, name):
         writer.writeheader()
         for r1, r2 in zip(ids, y_pred):
             writer.writerow({"Id": int(r1), "Prediction": int(r2)})
-
-
