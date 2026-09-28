@@ -6,6 +6,12 @@
 
 Cardiovascular diseases (CVDs) are a leading cause of death worldwide. This project leverages machine learning to predict the risk of developing CVDs, such as heart attacks, using health, lifestyle, and demographic data. We use data from the Behavioral Risk Factor Surveillance System (BRFSS) to build binary classification models that estimate the likelihood of Myocardial Infarct or Coronary Heart Disease (MICHD) for an individual.
 
+## Report
+
+The final report presents our **heart disease prediction pipeline using the BRFSS dataset**, including data preprocessing, class imbalance handling, and regularized logistic regression models implemented from scratch and tuned with 5-fold cross-validation.
+
+📄 [**Read the full project report**](https://github.com/maelysclerget/cardiovascular-risk-ml/blob/main/Disease_prediction_report.pdf)
+
 ## Table of Contents 📋
 
 - [Project Description](#project-description)
